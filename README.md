@@ -136,34 +136,11 @@ make clean            # Odstraní build artefakty a dočasné cache
 
 ---
 
-## 📁 Struktura repozitáře
+## 📁 Důležité soubory pro vývoj
 
-```
-├── Makefile                                    # Sada příkazů pro vývoj, kontrolu a údržbu
-├── README.md                                   # Dokumentace projektu v češtině
-├── .gitignore                                  # Pravidla pro Git (ignoruje node_modules, dist, cache, deprecated/)
-├── zvonky-editor.html                          # Samostatná offline HTML aplikace (distribuce)
-├── sample_jmenovky.csv                         # Vzorový CSV soubor s fiktivními jmény pro byty 01–28
-└── web/                                        # Zdrojový kód webové aplikace
-    ├── package.json                            # Konfigurace balíčků a skriptů
-    ├── pnpm-lock.yaml                          # Uzamčené verze závislostí
-    ├── tsconfig.json                           # Konfigurace TypeScriptu
-    ├── svelte.config.js                        # Konfigurace Svelte preprocessoru
-    ├── vite.config.ts                          # Vite konfigurace s vite-plugin-singlefile
-    └── src/
-        ├── App.svelte                          # Hlavní aplikace a stavový management
-        ├── main.ts                             # Vstupní bod aplikace
-        ├── fonts.css                           # Lokální @font-face deklarace
-        ├── assets/
-        │   ├── embeddedAssets.ts               # Base64 data URI fontů pro SVG export
-        │   └── fonts/                          # Optimalizované WOFF fonty (Technic NT, DIN, Fira, Iosevka)
-        ├── components/
-        │   ├── Header.svelte                   # Horní lišta (fonty, řezy, barvy, import/export, tiskové okno)
-        │   ├── FlatList.svelte                 # Editační panel pro 28 bytů s detekcí přetečení
-        │   └── TableauSvg.svelte               # SVG náhled tabla s plovoucí zoomovací lištou
-        └── lib/
-            ├── csvParser.ts                    # Import a export CSV formátu (výchozí vzorová jména)
-            ├── svgGenerator.ts                 # Generátor samostatného tiskového SVG (297 × 210 mm)
-            ├── tableauConfig.ts                # Geometrie, souřadnice sloupců a šablony
-            └── types.ts                        # TypeScript definice
-```
+- **`zvonky-editor.html`** – hotový samostatný sestavený soubor aplikace pro koncové uživatele (bez závislostí).
+- **`sample_jmenovky.csv`** – vzorový importní/exportní soubor pro 28 bytů.
+- **`web/src/lib/tableauConfig.ts`** – definice fyzické geometrie tabla (rozměry štítků, souřadnice slotů, tisková měřítka, šablony a styly).
+- **`web/src/lib/svgGenerator.ts`** – generování čistého tiskového vektorového SVG (297 × 210 mm) s vloženými fonty.
+- **`web/src/components/`** – UI komponenty Svelte (tabulka jmenovek, panel nastavení vzhledu, interaktivní SVG plátno).
+- **`Makefile`** – automatizace vývoje, lintingu a produkčního buildu (`make build`, `make check`).
