@@ -1,0 +1,20 @@
+{
+  "name": "zvonkove-tablo-web",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && cp dist/index.html ../zvonky-editor.html",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "@fontsource/barlow-semi-condensed": "^5.3.0",
+    "@fontsource/fira-sans-condensed": "^5.3.0",
+    "@sveltejs/vite-plugin-svelte": "^5.0.3",
+    "svelte": "^5.2.7",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.7",
+    "vite-plugin-singlefile": "^2.1.0"
+  }
+}
