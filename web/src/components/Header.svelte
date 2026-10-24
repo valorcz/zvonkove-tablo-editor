@@ -2,7 +2,12 @@
   import type { FlatEntry, BadgeStyleId } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
-  import { FONT_OPTIONS, BADGE_STYLES, DEFAULT_BADGE_FILL } from '../lib/tableauConfig';
+  import {
+    FONT_OPTIONS,
+    BADGE_STYLES,
+    DEFAULT_BADGE_FILL,
+    DEFAULT_TEXT_PADDING_LEFT,
+  } from '../lib/tableauConfig';
 
   let {
     flats = $bindable(),
@@ -13,6 +18,7 @@
     showScale = $bindable(),
     badgeStyle = $bindable('classic'),
     showCropMarks = $bindable(true),
+    textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
   }: {
     flats: FlatEntry[];
     showIds: boolean;
@@ -22,6 +28,7 @@
     showScale: boolean;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
+    textPaddingLeft?: number;
   } = $props();
 
   let fileInput: HTMLInputElement;
@@ -61,7 +68,8 @@
       isBold,
       showScale,
       badgeStyle,
-      showCropMarks
+      showCropMarks,
+      textPaddingLeft
     );
     const date = new Date().toISOString().slice(0, 10);
     downloadFile(svg, `zvonky-tablo-${date}.svg`, 'image/svg+xml;charset=utf-8;');
@@ -69,6 +77,7 @@
 
   let showPrintModal = $state(false);
   let showBatchModal = $state(false);
+  let showSazbaPopover = $state(false);
   let batchInputText = $state('');
 
   function handlePrint() {
@@ -120,6 +129,7 @@
       isBold = true;
       showScale = true;
       showCropMarks = true;
+      textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT;
     }
   }
 
@@ -180,32 +190,120 @@
 
     <!-- Group 2: Appearance & Print Aids -->
     <div class="control-group">
-      <!-- Badge Color Picker (Only if style uses background color) -->
-      {#if badgeStyle !== 'none'}
-        <div class="setting-item" title="Barva podkladu čísla bytu">
-          <label for="badge-color">Barva čísla:</label>
-          <div class="color-picker-wrap">
-            <input id="badge-color" type="color" bind:value={badgeColor} class="color-input" />
-            <div class="presets">
-              {#each colorPresets as preset}
-                <button
-                  type="button"
-                  class="preset-dot"
-                  style="background-color: {preset.value};"
-                  title={preset.label}
-                  onclick={() => (badgeColor = preset.value)}
-                ></button>
-              {/each}
-            </div>
+      <!-- Badge Color Picker (Disabled if style doesn't use background) -->
+      <div
+        class="setting-item"
+        class:disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}
+        title={badgeStyle === 'none' ? 'V šabloně bez čísel bytů není podklad aktivní' : badgeStyle === 'inline-num' ? 'Čistá typografie nepoužívá podkladový rámeček' : 'Barva podkladu čísla bytu'}
+      >
+        <label for="badge-color">Barva čísla:</label>
+        <div class="color-picker-wrap">
+          <input
+            id="badge-color"
+            type="color"
+            bind:value={badgeColor}
+            class="color-input"
+            disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}
+          />
+          <div class="presets">
+            {#each colorPresets as preset}
+              <button
+                type="button"
+                class="preset-dot"
+                style="background-color: {preset.value};"
+                title={preset.label}
+                disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}
+                onclick={() => (badgeColor = preset.value)}
+              ></button>
+            {/each}
           </div>
         </div>
+      </div>
 
-        <!-- Show IDs toggle -->
-        <label class="toggle-label" title="Zobrazit čísla bytů (v tisku výchozí zapnuto)">
-          <input type="checkbox" bind:checked={showIds} />
-          <span>Čísla bytů</span>
-        </label>
-      {/if}
+      <!-- Show IDs toggle (Always mounted, disabled when badgeStyle === 'none') -->
+      <label
+        class="toggle-label"
+        class:disabled={badgeStyle === 'none'}
+        title={badgeStyle === 'none' ? 'V šabloně „Bez čísel bytů“ jsou čísla skryta' : 'Zobrazit čísla bytů (v tisku výchozí zapnuto)'}
+      >
+        <input type="checkbox" bind:checked={showIds} disabled={badgeStyle === 'none'} />
+        <span>Čísla bytů</span>
+      </label>
+
+      <!-- Sazba & Text Margin Popover -->
+      <div class="sazba-popover-container">
+        <button
+          type="button"
+          class="btn-sazba"
+          class:active={showSazbaPopover}
+          onclick={() => (showSazbaPopover = !showSazbaPopover)}
+          title="Odsazení textu a parametry sazby štítků"
+        >
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="3"></circle>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+          </svg>
+          <span>Sazba ⚙️</span>
+        </button>
+
+        {#if showSazbaPopover}
+          <!-- svelte-ignore a11y_click_events_have_key_events -->
+          <!-- svelte-ignore a11y_no_static_element_interactions -->
+          <div class="sazba-dropdown" onclick={(e) => e.stopPropagation()}>
+            <div class="sazba-header">
+              <strong>Odsazení textu jmenovek</strong>
+              <button
+                type="button"
+                class="close-sazba-btn"
+                onclick={() => (showSazbaPopover = false)}
+                title="Zavřít"
+              >✕</button>
+            </div>
+            <p class="sazba-desc">
+              Odsazení textu zleva chrání text před stínem a plastovým rámečkem zvonkového tabla při bočním pohledu.
+            </p>
+            <div class="slider-row">
+              <input
+                type="range"
+                min="45"
+                max="130"
+                step="1"
+                bind:value={textPaddingLeft}
+                class="padding-slider"
+              />
+              <span class="slider-val">
+                {(textPaddingLeft / (3508 / 297)).toFixed(1)} mm ({Math.round(textPaddingLeft)} px)
+              </span>
+            </div>
+            <div class="preset-buttons">
+              <button
+                type="button"
+                class="btn-preset"
+                class:active={Math.abs(textPaddingLeft - 59.0) < 1}
+                onclick={() => (textPaddingLeft = 59.0)}
+              >
+                Úzké 5 mm
+              </button>
+              <button
+                type="button"
+                class="btn-preset"
+                class:active={Math.abs(textPaddingLeft - 88.5) < 1}
+                onclick={() => (textPaddingLeft = 88.5)}
+              >
+                Standard 7.5 mm
+              </button>
+              <button
+                type="button"
+                class="btn-preset"
+                class:active={Math.abs(textPaddingLeft - 118.0) < 1}
+                onclick={() => (textPaddingLeft = 118.0)}
+              >
+                Široké 10 mm
+              </button>
+            </div>
+          </div>
+        {/if}
+      </div>
 
       <!-- Crop Marks toggle -->
       <label class="toggle-label" title="Zobrazit vnější ořezové značky pro přesné řezání pravítkem">
@@ -444,6 +542,139 @@
     font-size: 0.8rem;
     color: #475569;
     font-weight: 500;
+    transition: opacity 0.15s ease-in-out;
+  }
+
+  .setting-item.disabled,
+  .toggle-label.disabled {
+    opacity: 0.45;
+    pointer-events: none;
+    cursor: not-allowed;
+  }
+
+  .sazba-popover-container {
+    position: relative;
+    display: inline-block;
+  }
+
+  .btn-sazba {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 5px;
+    background: #ffffff;
+    color: #334155;
+    font-size: 0.8rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .btn-sazba:hover,
+  .btn-sazba.active {
+    background: #e0f2fe;
+    border-color: #0284c7;
+    color: #0284c7;
+  }
+
+  .sazba-dropdown {
+    position: absolute;
+    top: calc(100% + 6px);
+    right: 0;
+    width: 290px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+    padding: 0.85rem;
+    z-index: 1000;
+    box-sizing: border-box;
+  }
+
+  .sazba-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #0f172a;
+    margin-bottom: 0.35rem;
+  }
+
+  .close-sazba-btn {
+    border: none;
+    background: transparent;
+    cursor: pointer;
+    color: #94a3b8;
+    font-size: 0.9rem;
+    padding: 0.1rem 0.3rem;
+    border-radius: 4px;
+  }
+
+  .close-sazba-btn:hover {
+    color: #0f172a;
+    background: #f1f5f9;
+  }
+
+  .sazba-desc {
+    font-size: 0.75rem;
+    color: #64748b;
+    margin: 0 0 0.65rem 0;
+    line-height: 1.35;
+  }
+
+  .slider-row {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .padding-slider {
+    flex: 1;
+    accent-color: #0284c7;
+    cursor: pointer;
+  }
+
+  .slider-val {
+    font-family: monospace;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #0369a1;
+    min-width: 95px;
+    text-align: right;
+  }
+
+  .preset-buttons {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .btn-preset {
+    flex: 1;
+    padding: 0.3rem 0.2rem;
+    font-size: 0.72rem;
+    font-weight: 500;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 4px;
+    color: #475569;
+    cursor: pointer;
+    text-align: center;
+    transition: all 0.1s;
+  }
+
+  .btn-preset:hover {
+    background: #e2e8f0;
+    color: #0f172a;
+  }
+
+  .btn-preset.active {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    font-weight: 600;
   }
 
   .select-input {

@@ -14,6 +14,7 @@
     BADGE_HEIGHT,
     BADGE_RX,
     BADGE_FONT_SIZE,
+    DEFAULT_TEXT_PADDING_LEFT,
   } from '../lib/tableauConfig';
   import {
     IOSEVKA_SEMIBOLD_WOFF,
@@ -34,6 +35,7 @@
     showScale = true,
     badgeStyle = 'classic',
     showCropMarks = true,
+    textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
   }: {
     flats: FlatEntry[];
     showIds: boolean;
@@ -43,6 +45,7 @@
     showScale?: boolean;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
+    textPaddingLeft?: number;
   } = $props();
 
   const fontWeight = $derived(
@@ -85,8 +88,8 @@
       const displayNames = names.length > 0 ? names : [`Byt ${entry.id}`];
 
       const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row, badgeStyle);
-      const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle);
+      const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
+      const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
       const lines: { text: string; y: number }[] = [];
       if (displayNames.length === 1) {
@@ -119,45 +122,45 @@
   const badges = $derived(
     flats.map((entry) => {
       const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row, badgeStyle);
+      const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
       const idStr = String(entry.id).padStart(2, '0');
 
-      if (badgeStyle === 'left-prefix') {
-        const boxX = coords.colX + 140.0;
-        const boxY = coords.slotCenterY - 28.0;
+      if (badgeStyle === 'left-block') {
+        const blockX = coords.colX + 129.54;
+        const blockY = coords.slotTop;
+        const blockW = 76.0;
+        const blockH = coords.slotBottom - coords.slotTop;
         return {
           id: entry.id,
           idStr,
-          rectX: boxX,
-          rectY: boxY,
-          rectW: 64,
-          rectH: 56,
-          rx: 6,
-          cx: boxX + 32,
+          rectX: blockX,
+          rectY: blockY,
+          rectW: blockW,
+          rectH: blockH,
+          rx: 0,
+          cx: blockX + blockW / 2.0,
           textY: coords.slotCenterY + 14.0,
-          fontSize: 38,
+          fontSize: 42,
           showDivider: true,
-          dividerX: coords.colX + 218.0,
-          dividerY1: coords.slotTop + 14.0,
-          dividerY2: coords.slotBottom - 14.0,
+          dividerX: blockX + blockW,
+          dividerY1: coords.slotTop,
+          dividerY2: coords.slotBottom,
           opacity: 1,
         } as RenderBadge;
       }
 
-      if (badgeStyle === 'corner-index') {
-        const boxX = coords.colX + 642.0;
-        const boxY = coords.slotTop + 10.0;
+      if (badgeStyle === 'inline-num') {
         return {
           id: entry.id,
           idStr,
-          rectX: boxX,
-          rectY: boxY,
-          rectW: 48,
-          rectH: 36,
-          rx: 4,
-          cx: boxX + 24,
-          textY: coords.slotTop + 35.0,
-          fontSize: 26,
+          rectX: 0,
+          rectY: 0,
+          rectW: 0,
+          rectH: 0,
+          rx: 0,
+          cx: coords.colX + 665.0,
+          textY: coords.slotCenterY + 13.0,
+          fontSize: 36,
           showDivider: false,
           dividerX: 0,
           dividerY1: 0,
@@ -490,6 +493,16 @@
                   >
                     {badge.idStr}
                   </text>
+                {:else if badgeStyle === 'inline-num'}
+                  <text
+                    x="{badge.cx.toFixed(2)}px"
+                    y="{badge.textY.toFixed(2)}px"
+                    text-anchor="middle"
+                    class="badge-text"
+                    style="font-size: {badge.fontSize}px;"
+                  >
+                    {badge.idStr}
+                  </text>
                 {:else}
                   <rect
                     x="{badge.rectX.toFixed(2)}px"
@@ -498,7 +511,7 @@
                     height="{badge.rectH}px"
                     rx="{badge.rx}px"
                     ry="{badge.rx}px"
-                    style="fill: {badgeColor}; {badgeStyle === 'corner-index' ? 'stroke: #cbd5e1; stroke-width: 1px;' : ''}"
+                    style="fill: {badgeColor};"
                   />
                   <text
                     x="{badge.cx.toFixed(2)}px"

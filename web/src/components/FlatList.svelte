@@ -1,6 +1,10 @@
 <script lang="ts">
   import type { FlatEntry, BadgeStyleId } from '../lib/types';
-  import { checkFitStatus, type FontOption } from '../lib/tableauConfig';
+  import {
+    checkFitStatus,
+    type FontOption,
+    DEFAULT_TEXT_PADDING_LEFT,
+  } from '../lib/tableauConfig';
 
   let {
     flats,
@@ -8,12 +12,14 @@
     badgeColor,
     isBold,
     badgeStyle = 'classic',
+    textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
   }: {
     flats: FlatEntry[];
     fontOption: FontOption;
     badgeColor: string;
     isBold: boolean;
     badgeStyle?: BadgeStyleId;
+    textPaddingLeft?: number;
   } = $props();
 
   function getFlat(id: number): FlatEntry {
@@ -65,11 +71,11 @@
     <div class="cards-stack">
       {#each col1Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
           <span
             class="flat-badge style-{badgeStyle}"
-            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' ? 'transparent' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
             title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
           >
             {String(fid).padStart(2, '0')}
@@ -115,11 +121,11 @@
     <div class="cards-stack">
       {#each col2Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
           <span
             class="flat-badge style-{badgeStyle}"
-            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' ? 'transparent' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
             title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
           >
             {String(fid).padStart(2, '0')}
@@ -165,11 +171,11 @@
     <div class="cards-stack">
       {#each col3Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
           <span
             class="flat-badge style-{badgeStyle}"
-            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' ? 'transparent' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
             title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
           >
             {String(fid).padStart(2, '0')}
@@ -286,6 +292,24 @@
     border-radius: 4px;
     flex-shrink: 0;
     border: 1px solid rgba(0, 0, 0, 0.08);
+  }
+
+  .flat-badge.style-left-block {
+    border-radius: 2px;
+    border-right: 2px solid #cbd5e1;
+  }
+
+  .flat-badge.style-inline-num {
+    border: none;
+    background: transparent;
+    color: #0f172a;
+    font-weight: 800;
+  }
+
+  .flat-badge.style-none {
+    border: 1px dashed #cbd5e1;
+    color: #94a3b8;
+    background: #f8fafc;
   }
 
   .inputs-group {

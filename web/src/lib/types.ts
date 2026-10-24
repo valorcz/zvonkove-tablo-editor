@@ -4,7 +4,7 @@ export interface FlatEntry {
   name2: string;
 }
 
-export type BadgeStyleId = 'classic' | 'left-prefix' | 'corner-index' | 'watermark' | 'none';
+export type BadgeStyleId = 'classic' | 'left-block' | 'inline-num' | 'watermark' | 'none';
 
 export interface BadgeStyleOption {
   id: BadgeStyleId;

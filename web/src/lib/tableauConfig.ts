@@ -18,6 +18,7 @@ export const IMAGE_SLOT_STEP = 160.0;
 export const IMAGE_SLOT_TOP_0 = 15.5;
 
 export const TEXT_LEFT_PADDING = 218.03;
+export const DEFAULT_TEXT_PADDING_LEFT = 88.5; // ~7.5 mm from slot inner left edge
 export const MAX_TEXT_WIDTH = 445.0;
 export const DEFAULT_FS_SINGLE = 57.9;
 export const DEFAULT_FS_DOUBLE = 48.0;
@@ -35,47 +36,72 @@ export const BADGE_TOP_OFFSET_Y = 36.0;
 export const BADGE_STYLES: BadgeStyleOption[] = [
   {
     id: 'classic',
-    label: 'Klasický štítek (vpravo)',
-    description: 'Zaoblený barevný obdélníček na pravé straně (původní styl)',
+    label: 'Klasický štítek (kontrastní badge)',
+    description: 'Zaoblený barevný obdélníček s číslem bytu vpravo',
   },
   {
-    id: 'left-prefix',
-    label: 'Technický prefix (vlevo)',
-    description: 'Jednotný svislý sloupec čísel vlevo s dělící linkou (standard ČSN / DIN)',
+    id: 'left-block',
+    label: 'Architektonický blok (plná výška vlevo)',
+    description: 'Barevný blok přes celou výšku štítku s výrazným číslem a linkou',
   },
   {
-    id: 'corner-index',
-    label: 'Decentní index (v rohu)',
-    description: 'Malé elegantní číslo v pravém horním rohu, uvolňuje prostor pro jména',
+    id: 'inline-num',
+    label: 'Čistá typografie (číslo vpravo bez rámečku)',
+    description: 'Typografické číslo bytu vpravo bez jakéhokoliv rámečku či podkladu',
   },
   {
     id: 'watermark',
     label: 'Jemný vodoznak (v pozadí)',
-    description: 'Velké decentní číslo v pozadí (15% krytí), text prochází v popředí',
+    description: 'Velké decentní číslo v pozadí (25% krytí), text prochází v popředí',
   },
   {
     id: 'none',
-    label: 'Bez čísel (pouze jména)',
+    label: 'Bez čísel bytů (pouze jména)',
     description: 'Čisté jmenovky bez čísel bytů s maximálním prostorem pro text',
   },
 ];
 
-export function getStyleMetrics(styleId: BadgeStyleId): {
+export function getStyleMetrics(
+  styleId: BadgeStyleId,
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+): {
   textLeftPadding: number;
   maxTextWidth: number;
 } {
+  const slotLeft = 129.54;
+  const slotRight = 703.96;
+
   switch (styleId) {
-    case 'left-prefix':
-      return { textLeftPadding: 232.0, maxTextWidth: 455.0 };
-    case 'corner-index':
-      return { textLeftPadding: 165.0, maxTextWidth: 505.0 };
-    case 'watermark':
-      return { textLeftPadding: 165.0, maxTextWidth: 515.0 };
-    case 'none':
-      return { textLeftPadding: 165.0, maxTextWidth: 525.0 };
+    case 'left-block': {
+      const blockWidth = 76.0;
+      const textGap = Math.max(16.0, textPaddingLeft * 0.35);
+      const startX = slotLeft + blockWidth + textGap;
+      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
+    case 'inline-num': {
+      const startX = slotLeft + textPaddingLeft;
+      const rightLimit = slotRight - 75.0; // reserve 75px for number and clearance
+      const maxWidth = Math.max(250.0, rightLimit - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
+    case 'watermark': {
+      const startX = slotLeft + textPaddingLeft;
+      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
+    case 'none': {
+      const startX = slotLeft + textPaddingLeft;
+      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
     case 'classic':
-    default:
-      return { textLeftPadding: 218.03, maxTextWidth: 445.0 };
+    default: {
+      const startX = slotLeft + textPaddingLeft;
+      const rightLimit = slotRight - 92.0; // reserve space for 60px badge + 32px margins
+      const maxWidth = Math.max(250.0, rightLimit - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
   }
 }
 
@@ -134,13 +160,14 @@ export function flatIdToSlot(flatId: number): { col: number; row: number } {
 export function getSlotCoordinates(
   col: number,
   row: number,
-  styleId: BadgeStyleId = 'classic'
+  styleId: BadgeStyleId = 'classic',
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): SlotCoordinates {
   const slotTop = (IMAGE_SLOT_TOP_0 + row * IMAGE_SLOT_STEP) * SCALE_Y + OFFSET_Y;
   const slotBottom = slotTop + IMAGE_SLOT_HEIGHT * SCALE_Y;
   const slotCenterY = (slotTop + slotBottom) / 2.0;
   const colX = COL_ORIGINS_X[col];
-  const { textLeftPadding } = getStyleMetrics(styleId);
+  const { textLeftPadding } = getStyleMetrics(styleId, textPaddingLeft);
   const textX = colX + textLeftPadding;
 
   return {
@@ -187,12 +214,13 @@ export function calculateFontSize(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidthOrStyle: number | BadgeStyleId = 'classic'
+  maxWidthOrStyle: number | BadgeStyleId = 'classic',
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): number {
   const maxWidth =
     typeof maxWidthOrStyle === 'number'
       ? maxWidthOrStyle
-      : getStyleMetrics(maxWidthOrStyle).maxTextWidth;
+      : getStyleMetrics(maxWidthOrStyle, textPaddingLeft).maxTextWidth;
 
   const isDouble = names.length > 1;
   const baseFs = isDouble ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
@@ -218,7 +246,8 @@ export function checkFitStatus(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidthOrStyle: number | BadgeStyleId = 'classic'
+  maxWidthOrStyle: number | BadgeStyleId = 'classic',
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): 'ok' | 'tight' | 'overflow' {
   const validNames = names.map((n) => n.trim()).filter((n) => n.length > 0);
   if (validNames.length === 0) return 'ok';
@@ -226,7 +255,7 @@ export function checkFitStatus(
   const maxWidth =
     typeof maxWidthOrStyle === 'number'
       ? maxWidthOrStyle
-      : getStyleMetrics(maxWidthOrStyle).maxTextWidth;
+      : getStyleMetrics(maxWidthOrStyle, textPaddingLeft).maxTextWidth;
 
   const fs = calculateFontSize(validNames, fontOption, isBold, maxWidth);
   const widths = validNames.map((n) => measureTextWidth(n, fs, fontOption, isBold));

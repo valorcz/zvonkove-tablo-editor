@@ -14,6 +14,7 @@ import {
   BADGE_RX,
   DEFAULT_BADGE_FILL,
   BADGE_FONT_SIZE,
+  DEFAULT_TEXT_PADDING_LEFT,
 } from './tableauConfig';
 import {
   IOSEVKA_SEMIBOLD_WOFF,
@@ -42,7 +43,8 @@ export function generateFullSVG(
   isBold = true,
   showScale = true,
   badgeStyle: BadgeStyleId = 'classic',
-  showCropMarks = true
+  showCropMarks = true,
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): string {
   let cardsXml = '';
   let badgesXml = '';
@@ -55,8 +57,8 @@ export function generateFullSVG(
     const displayNames = names.length > 0 ? names : [`Byt ${fid}`];
 
     const { col, row } = flatIdToSlot(fid);
-    const coords = getSlotCoordinates(col, row, badgeStyle);
-    const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle);
+    const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
+    const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
     // Letter-spacing for technical fonts to improve readability
     const letterSpacing = fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal';
@@ -77,22 +79,24 @@ export function generateFullSVG(
 
     // Render badge according to badgeStyle
     const idStr = String(fid).padStart(2, '0');
-    if (badgeStyle === 'left-prefix') {
-      const boxX = coords.colX + 140.0;
-      const boxY = coords.slotCenterY - 28.0;
+    if (badgeStyle === 'left-block') {
+      const blockX = coords.colX + 129.54;
+      const blockY = coords.slotTop;
+      const blockW = 76.0;
+      const blockH = coords.slotBottom - coords.slotTop;
+      const textX = blockX + blockW / 2.0;
       const textY = coords.slotCenterY + 14.0;
+      const divX = blockX + blockW;
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <rect x="${boxX.toFixed(2)}px" y="${boxY.toFixed(2)}px" width="64px" height="56px" rx="6px" ry="6px" style="fill:${badgeColor};"/>\n`;
-      badgesXml += `            <text x="${(boxX + 32).toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:38px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `            <line x1="${(coords.colX + 218).toFixed(2)}" y1="${(coords.slotTop + 14).toFixed(2)}" x2="${(coords.colX + 218).toFixed(2)}" y2="${(coords.slotBottom - 14).toFixed(2)}" stroke="#cbd5e1" stroke-width="2"/>\n`;
+      badgesXml += `            <rect x="${blockX.toFixed(2)}px" y="${blockY.toFixed(2)}px" width="${blockW.toFixed(2)}px" height="${blockH.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
+      badgesXml += `            <line x1="${divX.toFixed(2)}" y1="${blockY.toFixed(2)}" x2="${divX.toFixed(2)}" y2="${coords.slotBottom.toFixed(2)}" stroke="#cbd5e1" stroke-width="2"/>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:42px;fill:#000000;">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'corner-index') {
-      const boxX = coords.colX + 642.0;
-      const boxY = coords.slotTop + 10.0;
-      const textY = coords.slotTop + 35.0;
+    } else if (badgeStyle === 'inline-num') {
+      const textX = coords.colX + 665.0;
+      const textY = coords.slotCenterY + 13.0;
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <rect x="${boxX.toFixed(2)}px" y="${boxY.toFixed(2)}px" width="48px" height="36px" rx="4px" ry="4px" style="fill:${badgeColor};stroke:#cbd5e1;stroke-width:1;"/>\n`;
-      badgesXml += `            <text x="${(boxX + 24).toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:26px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:36px;fill:#000000;">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'watermark') {
       const textX = coords.colX + 636.0;

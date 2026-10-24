@@ -3,7 +3,11 @@
   import FlatList from './components/FlatList.svelte';
   import TableauSvg from './components/TableauSvg.svelte';
   import { createDefaultFlats, parseCSV } from './lib/csvParser';
-  import { FONT_OPTIONS, DEFAULT_BADGE_FILL } from './lib/tableauConfig';
+  import {
+    FONT_OPTIONS,
+    DEFAULT_BADGE_FILL,
+    DEFAULT_TEXT_PADDING_LEFT,
+  } from './lib/tableauConfig';
   import type { FlatEntry, BadgeStyleId } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
@@ -23,6 +27,7 @@
     activeTab: 'split' | 'editor' | 'preview';
     badgeStyle: BadgeStyleId;
     showCropMarks: boolean;
+    textPaddingLeft: number;
   }
 
   function loadInitialState(): StoredState {
@@ -51,6 +56,10 @@
             badgeStyle: parsed.badgeStyle || 'classic',
             showCropMarks:
               typeof parsed.showCropMarks === 'boolean' ? parsed.showCropMarks : true,
+            textPaddingLeft:
+              typeof parsed.textPaddingLeft === 'number'
+                ? parsed.textPaddingLeft
+                : DEFAULT_TEXT_PADDING_LEFT,
           };
         }
       }
@@ -67,6 +76,7 @@
       activeTab: 'split',
       badgeStyle: 'classic',
       showCropMarks: true,
+      textPaddingLeft: DEFAULT_TEXT_PADDING_LEFT,
     };
   }
 
@@ -79,6 +89,7 @@
   let showScale: boolean = $state(initial.showScale);
   let badgeStyle: BadgeStyleId = $state(initial.badgeStyle);
   let showCropMarks: boolean = $state(initial.showCropMarks);
+  let textPaddingLeft: number = $state(initial.textPaddingLeft);
   let activeTab: 'split' | 'editor' | 'preview' = $state(initial.activeTab);
   let isDraggingFile: boolean = $state(false);
 
@@ -101,6 +112,7 @@
           activeTab,
           badgeStyle,
           showCropMarks,
+          textPaddingLeft,
         })
       );
     } catch {
@@ -156,6 +168,7 @@
       bind:showScale
       bind:badgeStyle
       bind:showCropMarks
+      bind:textPaddingLeft
     />
     <div class="tab-bar">
       <button
@@ -195,6 +208,7 @@
         {badgeColor}
         {isBold}
         {badgeStyle}
+        {textPaddingLeft}
       />
     </div>
 
@@ -213,6 +227,7 @@
         {showScale}
         {badgeStyle}
         {showCropMarks}
+        {textPaddingLeft}
       />
     </div>
   </main>
