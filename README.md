@@ -29,6 +29,15 @@ Stačí otevřít soubor [`zvonky-editor.html`](zvonky-editor.html) v libovolné
 - **Chytré přizpůsobení délky textu**: Aplikace dynamicky měří šířku jména. Při delším textu automaticky zmenšuje velikost písma a v editačním formuláři zobrazuje varovné štítky:
   - `⚠️ Zmenšeno` (oranžová): text musel být zmenšen, aby se vešel.
   - `⚠️ Nevejde se` (červená): text je příliš dlouhý i při minimální čitelné velikosti písma.
+- **4 typografické šablony čísel bytů**:
+  - **Klasický štítek (vpravo)**: Zaoblený barevný obdélníček na pravé straně (původní styl z předlohy).
+  - **Technický prefix (vlevo)**: Čísla tvoří svislý sloupec na levém okraji s dělící linkou (standard ČSN a DIN 1451, ideální pro rychlé vyhledání bytu shora dolů).
+  - **Decentní index (v rohu)**: Malé elegantní číslo v pravém horním rohu, které uvolňuje hlavní osu pro dlouhá jména.
+  - **Jemný vodoznak (v pozadí)**: Velké číslo v pozadí (15 % krytí akcentní barvy), jméno prochází v popředí v plné černé barvě.
+  - **Bez čísel**: Čisté jmenovky bez čísel s maximálním prostorem pro text.
+- **Vnější ořezové značky (Crop marks)**: Volitelné jemné značky v rozích sloupců mimo tiskovou oblast pro přesné a rychlé řezání pravítkem nebo pákovou řezačkou.
+- **Hromadné vložení seznamu (Vložit text)**: Dialog pro zkopírování 28 řádků ze schránky (z Wordu, e-mailu) a okamžité naplnění celého tabla.
+- **Klávesová navigace**: Klávesa `Enter` v editačním políčku automaticky posouvá kurzor na další řádek / byt.
 - **Plovoucí Zoom & Focus widget**:
   - Krokování lupy (`−` a `+`) v rozsahu 50 % až 400 %.
   - Kliknutí na procenta (`{zoom}%`) **okamžitě obnoví celkový pohled na celou A4**.

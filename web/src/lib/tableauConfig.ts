@@ -1,4 +1,4 @@
-import type { SlotCoordinates } from './types';
+import type { SlotCoordinates, BadgeStyleId, BadgeStyleOption } from './types';
 
 // A4 Landscape 300 DPI canvas
 export const SVG_VIEWBOX = '0 0 3508 2481';
@@ -18,7 +18,7 @@ export const IMAGE_SLOT_STEP = 160.0;
 export const IMAGE_SLOT_TOP_0 = 15.5;
 
 export const TEXT_LEFT_PADDING = 218.03;
-export const MAX_TEXT_WIDTH = 465.0;
+export const MAX_TEXT_WIDTH = 445.0;
 export const DEFAULT_FS_SINGLE = 57.9;
 export const DEFAULT_FS_DOUBLE = 48.0;
 export const MIN_FONT_SIZE = 24.0;
@@ -31,6 +31,53 @@ export const DEFAULT_BADGE_FILL = '#FFE6C7';
 export const BADGE_FONT_SIZE = 40.6;
 export const BADGE_OFFSET_X = 671.1;
 export const BADGE_TOP_OFFSET_Y = 36.0;
+
+export const BADGE_STYLES: BadgeStyleOption[] = [
+  {
+    id: 'classic',
+    label: 'Klasický štítek (vpravo)',
+    description: 'Zaoblený barevný obdélníček na pravé straně (původní styl)',
+  },
+  {
+    id: 'left-prefix',
+    label: 'Technický prefix (vlevo)',
+    description: 'Jednotný svislý sloupec čísel vlevo s dělící linkou (standard ČSN / DIN)',
+  },
+  {
+    id: 'corner-index',
+    label: 'Decentní index (v rohu)',
+    description: 'Malé elegantní číslo v pravém horním rohu, uvolňuje prostor pro jména',
+  },
+  {
+    id: 'watermark',
+    label: 'Jemný vodoznak (v pozadí)',
+    description: 'Velké decentní číslo v pozadí (15% krytí), text prochází v popředí',
+  },
+  {
+    id: 'none',
+    label: 'Bez čísel (pouze jména)',
+    description: 'Čisté jmenovky bez čísel bytů s maximálním prostorem pro text',
+  },
+];
+
+export function getStyleMetrics(styleId: BadgeStyleId): {
+  textLeftPadding: number;
+  maxTextWidth: number;
+} {
+  switch (styleId) {
+    case 'left-prefix':
+      return { textLeftPadding: 232.0, maxTextWidth: 455.0 };
+    case 'corner-index':
+      return { textLeftPadding: 165.0, maxTextWidth: 505.0 };
+    case 'watermark':
+      return { textLeftPadding: 165.0, maxTextWidth: 515.0 };
+    case 'none':
+      return { textLeftPadding: 165.0, maxTextWidth: 525.0 };
+    case 'classic':
+    default:
+      return { textLeftPadding: 218.03, maxTextWidth: 445.0 };
+  }
+}
 
 export interface FontOption {
   id: string;
@@ -84,12 +131,17 @@ export function flatIdToSlot(flatId: number): { col: number; row: number } {
   return { col, row };
 }
 
-export function getSlotCoordinates(col: number, row: number): SlotCoordinates {
+export function getSlotCoordinates(
+  col: number,
+  row: number,
+  styleId: BadgeStyleId = 'classic'
+): SlotCoordinates {
   const slotTop = (IMAGE_SLOT_TOP_0 + row * IMAGE_SLOT_STEP) * SCALE_Y + OFFSET_Y;
   const slotBottom = slotTop + IMAGE_SLOT_HEIGHT * SCALE_Y;
   const slotCenterY = (slotTop + slotBottom) / 2.0;
   const colX = COL_ORIGINS_X[col];
-  const textX = colX + TEXT_LEFT_PADDING;
+  const { textLeftPadding } = getStyleMetrics(styleId);
+  const textX = colX + textLeftPadding;
 
   return {
     col,
@@ -135,8 +187,13 @@ export function calculateFontSize(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidth = MAX_TEXT_WIDTH
+  maxWidthOrStyle: number | BadgeStyleId = 'classic'
 ): number {
+  const maxWidth =
+    typeof maxWidthOrStyle === 'number'
+      ? maxWidthOrStyle
+      : getStyleMetrics(maxWidthOrStyle).maxTextWidth;
+
   const isDouble = names.length > 1;
   const baseFs = isDouble ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
 
@@ -161,10 +218,15 @@ export function checkFitStatus(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidth = MAX_TEXT_WIDTH
+  maxWidthOrStyle: number | BadgeStyleId = 'classic'
 ): 'ok' | 'tight' | 'overflow' {
   const validNames = names.map((n) => n.trim()).filter((n) => n.length > 0);
   if (validNames.length === 0) return 'ok';
+
+  const maxWidth =
+    typeof maxWidthOrStyle === 'number'
+      ? maxWidthOrStyle
+      : getStyleMetrics(maxWidthOrStyle).maxTextWidth;
 
   const fs = calculateFontSize(validNames, fontOption, isBold, maxWidth);
   const widths = validNames.map((n) => measureTextWidth(n, fs, fontOption, isBold));

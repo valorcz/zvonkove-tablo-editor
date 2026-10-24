@@ -4,6 +4,14 @@ export interface FlatEntry {
   name2: string;
 }
 
+export type BadgeStyleId = 'classic' | 'left-prefix' | 'corner-index' | 'watermark' | 'none';
+
+export interface BadgeStyleOption {
+  id: BadgeStyleId;
+  label: string;
+  description: string;
+}
+
 export interface SlotCoordinates {
   col: number;
   row: number;

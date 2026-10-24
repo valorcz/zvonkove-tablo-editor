@@ -4,7 +4,7 @@
   import TableauSvg from './components/TableauSvg.svelte';
   import { createDefaultFlats, parseCSV } from './lib/csvParser';
   import { FONT_OPTIONS, DEFAULT_BADGE_FILL } from './lib/tableauConfig';
-  import type { FlatEntry } from './lib/types';
+  import type { FlatEntry, BadgeStyleId } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
   const LEGACY_STORAGE_KEYS = [
@@ -21,6 +21,8 @@
     showScale: boolean;
     showIds: boolean;
     activeTab: 'split' | 'editor' | 'preview';
+    badgeStyle: BadgeStyleId;
+    showCropMarks: boolean;
   }
 
   function loadInitialState(): StoredState {
@@ -46,6 +48,9 @@
               parsed.activeTab === 'editor' || parsed.activeTab === 'preview'
                 ? parsed.activeTab
                 : 'split',
+            badgeStyle: parsed.badgeStyle || 'classic',
+            showCropMarks:
+              typeof parsed.showCropMarks === 'boolean' ? parsed.showCropMarks : true,
           };
         }
       }
@@ -60,6 +65,8 @@
       showScale: true,
       showIds: false,
       activeTab: 'split',
+      badgeStyle: 'classic',
+      showCropMarks: true,
     };
   }
 
@@ -70,6 +77,8 @@
   let selectedFontId: string = $state(initial.selectedFontId);
   let isBold: boolean = $state(initial.isBold);
   let showScale: boolean = $state(initial.showScale);
+  let badgeStyle: BadgeStyleId = $state(initial.badgeStyle);
+  let showCropMarks: boolean = $state(initial.showCropMarks);
   let activeTab: 'split' | 'editor' | 'preview' = $state(initial.activeTab);
   let isDraggingFile: boolean = $state(false);
 
@@ -90,6 +99,8 @@
           showScale,
           showIds,
           activeTab,
+          badgeStyle,
+          showCropMarks,
         })
       );
     } catch {
@@ -143,6 +154,8 @@
       bind:selectedFontId
       bind:isBold
       bind:showScale
+      bind:badgeStyle
+      bind:showCropMarks
     />
     <div class="tab-bar">
       <button
@@ -181,6 +194,7 @@
         fontOption={currentFontOption}
         {badgeColor}
         {isBold}
+        {badgeStyle}
       />
     </div>
 
@@ -197,6 +211,8 @@
         fontOption={currentFontOption}
         {isBold}
         {showScale}
+        {badgeStyle}
+        {showCropMarks}
       />
     </div>
   </main>

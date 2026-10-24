@@ -1,4 +1,4 @@
-import type { FlatEntry } from './types';
+import type { FlatEntry, BadgeStyleId } from './types';
 import {
   COL_ORIGINS_X,
   SVG_VIEWBOX,
@@ -40,7 +40,9 @@ export function generateFullSVG(
   badgeColor = DEFAULT_BADGE_FILL,
   fontOption: FontOption = FONT_OPTIONS[0],
   isBold = true,
-  showScale = true
+  showScale = true,
+  badgeStyle: BadgeStyleId = 'classic',
+  showCropMarks = true
 ): string {
   let cardsXml = '';
   let badgesXml = '';
@@ -53,43 +55,104 @@ export function generateFullSVG(
     const displayNames = names.length > 0 ? names : [`Byt ${fid}`];
 
     const { col, row } = flatIdToSlot(fid);
-    const coords = getSlotCoordinates(col, row);
-    const fs = calculateFontSize(displayNames, fontOption, isBold);
+    const coords = getSlotCoordinates(col, row, badgeStyle);
+    const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle);
+
+    // Letter-spacing for technical fonts to improve readability
+    const letterSpacing = fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal';
 
     // Names card
     cardsXml += `        <g id="card-flat-${String(fid).padStart(2, '0')}">\n`;
     if (displayNames.length === 1) {
       const baselineY = coords.slotCenterY + 0.38 * fs;
-      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${baselineY.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;fill:#000000;">${escapeXml(displayNames[0])}</text>\n`;
+      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${baselineY.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;letter-spacing:${letterSpacing};fill:#000000;">${escapeXml(displayNames[0])}</text>\n`;
     } else {
-      const lineHeight = fs * 1.15;
+      const lineHeight = fs * 1.18;
       const b1 = coords.slotCenterY - 0.5 * lineHeight + 0.38 * fs;
       const b2 = coords.slotCenterY + 0.5 * lineHeight + 0.38 * fs;
-      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${b1.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;fill:#000000;">${escapeXml(displayNames[0])}</text>\n`;
-      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${b2.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;fill:#000000;">${escapeXml(displayNames[1])}</text>\n`;
+      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${b1.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;letter-spacing:${letterSpacing};fill:#000000;">${escapeXml(displayNames[0])}</text>\n`;
+      cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${b2.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;letter-spacing:${letterSpacing};fill:#000000;">${escapeXml(displayNames[1])}</text>\n`;
     }
     cardsXml += `        </g>\n`;
 
-    // Flat ID badge
-    const cx = coords.badgeCx;
-    const cy = coords.badgeCy;
-    const rectX = cx - BADGE_WIDTH / 2.0;
-    const rectY = cy - BADGE_HEIGHT / 2.0;
-    const badgeTextY = cy + 0.36 * BADGE_FONT_SIZE;
+    // Render badge according to badgeStyle
+    const idStr = String(fid).padStart(2, '0');
+    if (badgeStyle === 'left-prefix') {
+      const boxX = coords.colX + 140.0;
+      const boxY = coords.slotCenterY - 28.0;
+      const textY = coords.slotCenterY + 14.0;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <rect x="${boxX.toFixed(2)}px" y="${boxY.toFixed(2)}px" width="64px" height="56px" rx="6px" ry="6px" style="fill:${badgeColor};"/>\n`;
+      badgesXml += `            <text x="${(boxX + 32).toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:38px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `            <line x1="${(coords.colX + 218).toFixed(2)}" y1="${(coords.slotTop + 14).toFixed(2)}" x2="${(coords.colX + 218).toFixed(2)}" y2="${(coords.slotBottom - 14).toFixed(2)}" stroke="#cbd5e1" stroke-width="2"/>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'corner-index') {
+      const boxX = coords.colX + 642.0;
+      const boxY = coords.slotTop + 10.0;
+      const textY = coords.slotTop + 35.0;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <rect x="${boxX.toFixed(2)}px" y="${boxY.toFixed(2)}px" width="48px" height="36px" rx="4px" ry="4px" style="fill:${badgeColor};stroke:#cbd5e1;stroke-width:1;"/>\n`;
+      badgesXml += `            <text x="${(boxX + 24).toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:26px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'watermark') {
+      const textX = coords.colX + 636.0;
+      const textY = coords.slotCenterY + 26.0;
+      const wmColor = badgeColor === '#FFFFFF' ? '#94a3b8' : badgeColor;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:78px;fill:${wmColor};opacity:0.25;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'classic') {
+      const cx = coords.badgeCx;
+      const cy = coords.badgeCy;
+      const rectX = cx - BADGE_WIDTH / 2.0;
+      const rectY = cy - BADGE_HEIGHT / 2.0;
+      const badgeTextY = cy + 0.36 * BADGE_FONT_SIZE;
 
-    badgesXml += `        <g id="flat-badge-${String(fid).padStart(2, '0')}">\n`;
-    badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
-    badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${String(fid).padStart(2, '0')}</text>\n`;
-    badgesXml += `        </g>\n`;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
+      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    }
   }
 
-  const idsStyle = showIds ? '' : ' style="display:none;"';
+  const idsVisible = showIds && badgeStyle !== 'none';
+  const idsStyle = idsVisible ? '' : ' style="display:none;"';
 
   // Vector 10-slot column template
   let templateSlots = '';
   for (let i = 0; i < 10; i++) {
     const y = 15.5 + i * 160.0;
     templateSlots += `        <rect x="110.5" y="${y.toFixed(1)}" width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5"/>\n`;
+  }
+
+  // Corner crop marks for precise cutting
+  let cropMarksXml = '';
+  if (showCropMarks) {
+    const colW = 621.0 * 1.17229;
+    const colH = 1611.0 * 1.17231;
+    const topY = 210.788;
+    const botY = topY + colH;
+    const markLen = 22.0;
+    const markGap = 5.0;
+
+    let marks = '';
+    for (const colX of COL_ORIGINS_X) {
+      const rightX = colX + colW;
+      // Top-left
+      marks += `        <line x1="${colX.toFixed(2)}" y1="${(topY - markGap - markLen).toFixed(2)}" x2="${colX.toFixed(2)}" y2="${(topY - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(colX - markGap - markLen).toFixed(2)}" y1="${topY.toFixed(2)}" x2="${(colX - markGap).toFixed(2)}" y2="${topY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      // Top-right
+      marks += `        <line x1="${rightX.toFixed(2)}" y1="${(topY - markGap - markLen).toFixed(2)}" x2="${rightX.toFixed(2)}" y2="${(topY - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(rightX + markGap).toFixed(2)}" y1="${topY.toFixed(2)}" x2="${(rightX + markGap + markLen).toFixed(2)}" y2="${topY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      // Bottom-left
+      marks += `        <line x1="${colX.toFixed(2)}" y1="${(botY + markGap).toFixed(2)}" x2="${colX.toFixed(2)}" y2="${(botY + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(colX - markGap - markLen).toFixed(2)}" y1="${botY.toFixed(2)}" x2="${(colX - markGap).toFixed(2)}" y2="${botY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      // Bottom-right
+      marks += `        <line x1="${rightX.toFixed(2)}" y1="${(botY + markGap).toFixed(2)}" x2="${rightX.toFixed(2)}" y2="${(botY + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(rightX + markGap).toFixed(2)}" y1="${botY.toFixed(2)}" x2="${(rightX + markGap + markLen).toFixed(2)}" y2="${botY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+    }
+
+    cropMarksXml = `    <g id="Ořezové-značky">\n${marks}    </g>\n`;
   }
 
   // 100 mm printable calibration scale
@@ -117,7 +180,7 @@ export function generateFullSVG(
     scaleXml = `    <g id="Měřítko-tisku">
         <line x1="${startX.toFixed(2)}" y1="${rulerY}" x2="${(startX + rulerLengthPx).toFixed(2)}" y2="${rulerY}" stroke="#000000" stroke-width="2.5"/>
 ${ticks}        <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 36}" text-anchor="middle" style="font-family:'DINish', sans-serif;font-size:26px;font-weight:700;fill:#000000;">KONTROLNÍ MĚŘÍTKO 1:1 (PŘESNĚ 100 mm / 10 cm)</text>
-        <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 68}" text-anchor="middle" style="font-family:'DINish', sans-serif;font-size:20px;fill:#475569;">Při tisku zkontrolujte pravítkem. Pokud úsečka neměří přesně 100 mm, nastavte měřítko tisku na 100% (Skutečná velikost / Do not fit).</text>
+        <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 68}" text-anchor="middle" style="font-family:'DINish', sans-serif;font-size:20px;fill:#475569;">Při tisku zkontrolujte pravítkem. Pokud úsečka neměří přesně 100 mm, nastavte okraje na Žádné a měřítko na 100%.</text>
         <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 96}" text-anchor="middle" style="font-family:'DINish', sans-serif;font-size:18px;fill:#64748b;">Rozměr jednoho štítku: 48,6 × 12,9 mm</text>
     </g>\n`;
   }
@@ -197,7 +260,7 @@ ${templateSlots}        </g>
 ${cardsXml}    </g>
     <g id="Čísla-bytů" serif:id="Čísla bytů"${idsStyle}>
 ${badgesXml}    </g>
-${scaleXml}</svg>`;
+${cropMarksXml}${scaleXml}</svg>`;
 }
 
 export function downloadFile(content: string, filename: string, mimeType: string) {

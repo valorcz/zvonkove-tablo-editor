@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { FlatEntry } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId } from '../lib/types';
   import {
     COL_ORIGINS_X,
     SVG_VIEWBOX,
@@ -32,6 +32,8 @@
     fontOption,
     isBold,
     showScale = true,
+    badgeStyle = 'classic',
+    showCropMarks = true,
   }: {
     flats: FlatEntry[];
     showIds: boolean;
@@ -39,10 +41,16 @@
     fontOption: FontOption;
     isBold: boolean;
     showScale?: boolean;
+    badgeStyle?: BadgeStyleId;
+    showCropMarks?: boolean;
   } = $props();
 
   const fontWeight = $derived(
     isBold ? (fontOption.id === 'Iosevka' ? 600 : 700) : 400
+  );
+
+  const letterSpacing = $derived(
+    fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal'
   );
 
   interface RenderCard {
@@ -58,8 +66,17 @@
     idStr: string;
     rectX: number;
     rectY: number;
+    rectW: number;
+    rectH: number;
+    rx: number;
     cx: number;
     textY: number;
+    fontSize: number;
+    showDivider: boolean;
+    dividerX: number;
+    dividerY1: number;
+    dividerY2: number;
+    opacity: number;
   }
 
   const cards = $derived(
@@ -68,8 +85,8 @@
       const displayNames = names.length > 0 ? names : [`Byt ${entry.id}`];
 
       const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row);
-      const fs = calculateFontSize(displayNames, fontOption, isBold);
+      const coords = getSlotCoordinates(col, row, badgeStyle);
+      const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle);
 
       const lines: { text: string; y: number }[] = [];
       if (displayNames.length === 1) {
@@ -78,7 +95,7 @@
           y: coords.slotCenterY + 0.38 * fs,
         });
       } else {
-        const lineHeight = fs * 1.15;
+        const lineHeight = fs * 1.18;
         lines.push({
           text: displayNames[0],
           y: coords.slotCenterY - 0.5 * lineHeight + 0.38 * fs,
@@ -102,20 +119,124 @@
   const badges = $derived(
     flats.map((entry) => {
       const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row);
+      const coords = getSlotCoordinates(col, row, badgeStyle);
+      const idStr = String(entry.id).padStart(2, '0');
+
+      if (badgeStyle === 'left-prefix') {
+        const boxX = coords.colX + 140.0;
+        const boxY = coords.slotCenterY - 28.0;
+        return {
+          id: entry.id,
+          idStr,
+          rectX: boxX,
+          rectY: boxY,
+          rectW: 64,
+          rectH: 56,
+          rx: 6,
+          cx: boxX + 32,
+          textY: coords.slotCenterY + 14.0,
+          fontSize: 38,
+          showDivider: true,
+          dividerX: coords.colX + 218.0,
+          dividerY1: coords.slotTop + 14.0,
+          dividerY2: coords.slotBottom - 14.0,
+          opacity: 1,
+        } as RenderBadge;
+      }
+
+      if (badgeStyle === 'corner-index') {
+        const boxX = coords.colX + 642.0;
+        const boxY = coords.slotTop + 10.0;
+        return {
+          id: entry.id,
+          idStr,
+          rectX: boxX,
+          rectY: boxY,
+          rectW: 48,
+          rectH: 36,
+          rx: 4,
+          cx: boxX + 24,
+          textY: coords.slotTop + 35.0,
+          fontSize: 26,
+          showDivider: false,
+          dividerX: 0,
+          dividerY1: 0,
+          dividerY2: 0,
+          opacity: 1,
+        } as RenderBadge;
+      }
+
+      if (badgeStyle === 'watermark') {
+        return {
+          id: entry.id,
+          idStr,
+          rectX: 0,
+          rectY: 0,
+          rectW: 0,
+          rectH: 0,
+          rx: 0,
+          cx: coords.colX + 636.0,
+          textY: coords.slotCenterY + 26.0,
+          fontSize: 78,
+          showDivider: false,
+          dividerX: 0,
+          dividerY1: 0,
+          dividerY2: 0,
+          opacity: 0.25,
+        } as RenderBadge;
+      }
+
+      // Classic badge
       const cx = coords.badgeCx;
       const cy = coords.badgeCy;
-
       return {
         id: entry.id,
-        idStr: String(entry.id).padStart(2, '0'),
+        idStr,
         rectX: cx - BADGE_WIDTH / 2.0,
         rectY: cy - BADGE_HEIGHT / 2.0,
+        rectW: BADGE_WIDTH,
+        rectH: BADGE_HEIGHT,
+        rx: BADGE_RX,
         cx,
         textY: cy + 0.36 * BADGE_FONT_SIZE,
+        fontSize: BADGE_FONT_SIZE,
+        showDivider: false,
+        dividerX: 0,
+        dividerY1: 0,
+        dividerY2: 0,
+        opacity: 1,
       } as RenderBadge;
     })
   );
+
+  // Corner crop marks for trimming
+  const cropMarks = $derived.by(() => {
+    if (!showCropMarks) return [];
+    const colW = 621.0 * 1.17229;
+    const colH = 1611.0 * 1.17231;
+    const topY = 210.788;
+    const botY = topY + colH;
+    const markLen = 22.0;
+    const markGap = 5.0;
+
+    const list: { x1: number; y1: number; x2: number; y2: number }[] = [];
+    for (const colX of COL_ORIGINS_X) {
+      const rightX = colX + colW;
+      // Top-left
+      list.push({ x1: colX, y1: topY - markGap - markLen, x2: colX, y2: topY - markGap });
+      list.push({ x1: colX - markGap - markLen, y1: topY, x2: colX - markGap, y2: topY });
+      // Top-right
+      list.push({ x1: rightX, y1: topY - markGap - markLen, x2: rightX, y2: topY - markGap });
+      list.push({ x1: rightX + markGap, y1: topY, x2: rightX + markGap + markLen, y2: topY });
+      // Bottom-left
+      list.push({ x1: colX, y1: botY + markGap, x2: colX, y2: botY + markGap + markLen });
+      list.push({ x1: colX - markGap - markLen, y1: botY, x2: colX - markGap, y2: botY });
+      // Bottom-right
+      list.push({ x1: rightX, y1: botY + markGap, x2: rightX, y2: botY + markGap + markLen });
+      list.push({ x1: rightX + markGap, y1: botY, x2: rightX + markGap + markLen, y2: botY });
+    }
+    return list;
+  });
 
   // Ruler ticks (0 to 100 mm)
   const rulerLengthMm = 100;
@@ -345,7 +466,7 @@
                   x="{card.textX.toFixed(2)}px"
                   y="{line.y.toFixed(2)}px"
                   class="name-text"
-                  style="font-family: {fontOption.fontFamily}; font-weight: {fontWeight}; font-size: {card.fs.toFixed(3)}px;"
+                  style="font-family: {fontOption.fontFamily}; font-weight: {fontWeight}; font-size: {card.fs.toFixed(3)}px; letter-spacing: {letterSpacing};"
                 >
                   {line.text}
                 </text>
@@ -355,30 +476,70 @@
         </g>
 
         <!-- Flat IDs Layer -->
-        <g id="Čísla-bytů" style={showIds ? '' : 'display: none;'}>
-          {#each badges as badge (badge.id)}
-            <g id="flat-badge-{badge.idStr}">
-              <rect
-                x="{badge.rectX.toFixed(2)}px"
-                y="{badge.rectY.toFixed(2)}px"
-                width="{BADGE_WIDTH.toFixed(2)}px"
-                height="{BADGE_HEIGHT.toFixed(2)}px"
-                rx="{BADGE_RX.toFixed(2)}px"
-                ry="{BADGE_RX.toFixed(2)}px"
-                style="fill: {badgeColor};"
+        {#if showIds && badgeStyle !== 'none'}
+          <g id="Čísla-bytů">
+            {#each badges as badge (badge.id)}
+              <g id="flat-badge-{badge.idStr}">
+                {#if badgeStyle === 'watermark'}
+                  <text
+                    x="{badge.cx.toFixed(2)}px"
+                    y="{badge.textY.toFixed(2)}px"
+                    text-anchor="middle"
+                    class="badge-text"
+                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {badgeColor === '#FFFFFF' ? '#94a3b8' : badgeColor}; opacity: {badge.opacity};"
+                  >
+                    {badge.idStr}
+                  </text>
+                {:else}
+                  <rect
+                    x="{badge.rectX.toFixed(2)}px"
+                    y="{badge.rectY.toFixed(2)}px"
+                    width="{badge.rectW}px"
+                    height="{badge.rectH}px"
+                    rx="{badge.rx}px"
+                    ry="{badge.rx}px"
+                    style="fill: {badgeColor}; {badgeStyle === 'corner-index' ? 'stroke: #cbd5e1; stroke-width: 1px;' : ''}"
+                  />
+                  <text
+                    x="{badge.cx.toFixed(2)}px"
+                    y="{badge.textY.toFixed(2)}px"
+                    text-anchor="middle"
+                    class="badge-text"
+                    style="font-size: {badge.fontSize}px;"
+                  >
+                    {badge.idStr}
+                  </text>
+                  {#if badge.showDivider}
+                    <line
+                      x1="{badge.dividerX.toFixed(2)}"
+                      y1="{badge.dividerY1.toFixed(2)}"
+                      x2="{badge.dividerX.toFixed(2)}"
+                      y2="{badge.dividerY2.toFixed(2)}"
+                      stroke="#cbd5e1"
+                      stroke-width="2"
+                    />
+                  {/if}
+                {/if}
+              </g>
+            {/each}
+          </g>
+        {/if}
+
+        <!-- Crop marks for trimmer cutting -->
+        {#if showCropMarks}
+          <g id="Ořezové-značky">
+            {#each cropMarks as m}
+              <line
+                x1="{m.x1.toFixed(2)}"
+                y1="{m.y1.toFixed(2)}"
+                x2="{m.x2.toFixed(2)}"
+                y2="{m.y2.toFixed(2)}"
+                stroke="#94a3b8"
+                stroke-width="1.2"
               />
-              <text
-                x="{badge.cx.toFixed(2)}px"
-                y="{badge.textY.toFixed(2)}px"
-                text-anchor="middle"
-                class="badge-text"
-                style="font-size: {BADGE_FONT_SIZE.toFixed(2)}px;"
-              >
-                {badge.idStr}
-              </text>
-            </g>
-          {/each}
-        </g>
+            {/each}
+          </g>
+        {/if}
 
         <!-- Printable 1:1 Calibration Scale -->
         {#if showScale}

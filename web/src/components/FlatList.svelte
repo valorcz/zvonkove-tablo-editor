@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FlatEntry } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId } from '../lib/types';
   import { checkFitStatus, type FontOption } from '../lib/tableauConfig';
 
   let {
@@ -7,11 +7,13 @@
     fontOption,
     badgeColor,
     isBold,
+    badgeStyle = 'classic',
   }: {
     flats: FlatEntry[];
     fontOption: FontOption;
     badgeColor: string;
     isBold: boolean;
+    badgeStyle?: BadgeStyleId;
   } = $props();
 
   function getFlat(id: number): FlatEntry {
@@ -21,6 +23,33 @@
   function clearFlat(flat: FlatEntry) {
     flat.name1 = '';
     flat.name2 = '';
+  }
+
+  function handleKeyDown(e: KeyboardEvent, currentFlatId: number, field: 'name1' | 'name2') {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      let targetId = currentFlatId;
+      let targetField: 'name1' | 'name2' = field;
+
+      if (field === 'name1') {
+        targetField = 'name2';
+      } else {
+        // In physical columns, flats go downwards: 10->9->8... or 20->19...
+        targetId = currentFlatId - 1;
+        if (targetId === 0) targetId = 20;
+        if (targetId === 10) targetId = 28;
+        if (targetId === 20) targetId = 10;
+        targetField = 'name1';
+      }
+
+      const nextEl = document.querySelector<HTMLInputElement>(
+        `input[data-flat="${targetId}"][data-field="${targetField}"]`
+      );
+      if (nextEl) {
+        nextEl.focus();
+        nextEl.select();
+      }
+    }
   }
 
   // Physical column sequences
@@ -36,18 +65,25 @@
     <div class="cards-stack">
       {#each col1Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
-          <span class="flat-badge" style="background-color: {badgeColor};">
+          <span
+            class="flat-badge style-{badgeStyle}"
+            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
+          >
             {String(fid).padStart(2, '0')}
           </span>
           <div class="inputs-group">
             <div class="input-line">
               <input
                 type="text"
+                data-flat={fid}
+                data-field="name1"
                 bind:value={flat.name1}
                 placeholder="Jméno 1 (výchozí: Byt {fid})"
                 class="name-input"
+                onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
                 <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
@@ -60,9 +96,12 @@
             </div>
             <input
               type="text"
+              data-flat={fid}
+              data-field="name2"
               bind:value={flat.name2}
               placeholder="Jméno 2 (volitelné)"
               class="name-input secondary"
+              onkeydown={(e) => handleKeyDown(e, fid, 'name2')}
             />
           </div>
         </div>
@@ -76,18 +115,25 @@
     <div class="cards-stack">
       {#each col2Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
-          <span class="flat-badge" style="background-color: {badgeColor};">
+          <span
+            class="flat-badge style-{badgeStyle}"
+            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
+          >
             {String(fid).padStart(2, '0')}
           </span>
           <div class="inputs-group">
             <div class="input-line">
               <input
                 type="text"
+                data-flat={fid}
+                data-field="name1"
                 bind:value={flat.name1}
                 placeholder="Jméno 1 (výchozí: Byt {fid})"
                 class="name-input"
+                onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
                 <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
@@ -100,9 +146,12 @@
             </div>
             <input
               type="text"
+              data-flat={fid}
+              data-field="name2"
               bind:value={flat.name2}
               placeholder="Jméno 2 (volitelné)"
               class="name-input secondary"
+              onkeydown={(e) => handleKeyDown(e, fid, 'name2')}
             />
           </div>
         </div>
@@ -116,18 +165,25 @@
     <div class="cards-stack">
       {#each col3Ids as fid (fid)}
         {@const flat = getFlat(fid)}
-        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold)}
+        {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle)}
         <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
-          <span class="flat-badge" style="background-color: {badgeColor};">
+          <span
+            class="flat-badge style-{badgeStyle}"
+            style="background-color: {badgeStyle === 'none' ? '#f1f5f9' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+            title="Byt {fid} ({badgeStyle === 'none' ? 'číslo skryto' : 'styl: ' + badgeStyle})"
+          >
             {String(fid).padStart(2, '0')}
           </span>
           <div class="inputs-group">
             <div class="input-line">
               <input
                 type="text"
+                data-flat={fid}
+                data-field="name1"
                 bind:value={flat.name1}
                 placeholder="Jméno 1 (výchozí: Byt {fid})"
                 class="name-input"
+                onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
                 <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
@@ -140,9 +196,12 @@
             </div>
             <input
               type="text"
+              data-flat={fid}
+              data-field="name2"
               bind:value={flat.name2}
               placeholder="Jméno 2 (volitelné)"
               class="name-input secondary"
+              onkeydown={(e) => handleKeyDown(e, fid, 'name2')}
             />
           </div>
         </div>
