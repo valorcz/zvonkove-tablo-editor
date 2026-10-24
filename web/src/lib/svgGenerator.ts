@@ -15,6 +15,7 @@ import {
   DEFAULT_BADGE_FILL,
   BADGE_FONT_SIZE,
   DEFAULT_TEXT_PADDING_LEFT,
+  getWatermarkStyle,
 } from './tableauConfig';
 import {
   IOSEVKA_SEMIBOLD_WOFF,
@@ -101,11 +102,9 @@ export function generateFullSVG(
     } else if (badgeStyle === 'watermark') {
       const textX = coords.colX + 636.0;
       const textY = coords.slotCenterY + 28.0;
-      const isPale = badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0';
-      const wmColor = isPale ? '#475569' : badgeColor;
-      const wmOpacity = isPale ? '0.35' : '0.45';
+      const wm = getWatermarkStyle(badgeColor);
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:84px;fill:${wmColor};opacity:${wmOpacity};">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:84px;fill:${wm.fill};opacity:${wm.opacity};">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'classic') {
       const cx = coords.badgeCx;

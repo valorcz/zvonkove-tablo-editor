@@ -1,6 +1,7 @@
 <script lang="ts">
   import Header from './components/Header.svelte';
   import FlatList from './components/FlatList.svelte';
+  import SettingsPanel from './components/SettingsPanel.svelte';
   import TableauSvg from './components/TableauSvg.svelte';
   import { createDefaultFlats, parseCSV } from './lib/csvParser';
   import {
@@ -24,10 +25,10 @@
     isBold: boolean;
     showScale: boolean;
     showIds: boolean;
-    activeTab: 'split' | 'editor' | 'preview';
     badgeStyle: BadgeStyleId;
     showCropMarks: boolean;
     textPaddingLeft: number;
+    leftPaneView?: 'names' | 'settings';
   }
 
   function loadInitialState(): StoredState {
@@ -49,10 +50,6 @@
             isBold: typeof parsed.isBold === 'boolean' ? parsed.isBold : true,
             showScale: typeof parsed.showScale === 'boolean' ? parsed.showScale : true,
             showIds: typeof parsed.showIds === 'boolean' ? parsed.showIds : false,
-            activeTab:
-              parsed.activeTab === 'editor' || parsed.activeTab === 'preview'
-                ? parsed.activeTab
-                : 'split',
             badgeStyle: parsed.badgeStyle || 'classic',
             showCropMarks:
               typeof parsed.showCropMarks === 'boolean' ? parsed.showCropMarks : true,
@@ -60,6 +57,7 @@
               typeof parsed.textPaddingLeft === 'number'
                 ? parsed.textPaddingLeft
                 : DEFAULT_TEXT_PADDING_LEFT,
+            leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
           };
         }
       }
@@ -73,10 +71,10 @@
       isBold: true,
       showScale: true,
       showIds: false,
-      activeTab: 'split',
       badgeStyle: 'classic',
       showCropMarks: true,
       textPaddingLeft: DEFAULT_TEXT_PADDING_LEFT,
+      leftPaneView: 'names',
     };
   }
 
@@ -90,7 +88,10 @@
   let badgeStyle: BadgeStyleId = $state(initial.badgeStyle);
   let showCropMarks: boolean = $state(initial.showCropMarks);
   let textPaddingLeft: number = $state(initial.textPaddingLeft);
-  let activeTab: 'split' | 'editor' | 'preview' = $state(initial.activeTab);
+  let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
+  let mobileTab: 'names' | 'settings' | 'preview' = $state(
+    initial.leftPaneView === 'settings' ? 'settings' : 'names'
+  );
   let isDraggingFile: boolean = $state(false);
 
   const currentFontOption = $derived(
@@ -109,10 +110,10 @@
           isBold,
           showScale,
           showIds,
-          activeTab,
           badgeStyle,
           showCropMarks,
           textPaddingLeft,
+          leftPaneView,
         })
       );
     } catch {
@@ -149,6 +150,16 @@
     };
     reader.readAsText(file);
   }
+
+  function toggleSettingsFromHeader() {
+    if (leftPaneView === 'settings') {
+      leftPaneView = 'names';
+      mobileTab = 'names';
+    } else {
+      leftPaneView = 'settings';
+      mobileTab = 'settings';
+    }
+  }
 </script>
 
 <svelte:window
@@ -169,54 +180,150 @@
       bind:badgeStyle
       bind:showCropMarks
       bind:textPaddingLeft
+      onToggleSettings={toggleSettingsFromHeader}
+      isSettingsOpen={leftPaneView === 'settings' || mobileTab === 'settings'}
     />
-    <div class="tab-bar">
+
+    <!-- Mobile View Switcher (Only visible on screens <= 1024px) -->
+    <div class="mobile-tab-bar">
       <button
-        class="tab-btn tab-btn-split"
-        class:active={activeTab === 'split'}
-        onclick={() => (activeTab = 'split')}
+        type="button"
+        class="mobile-tab-btn"
+        class:active={mobileTab === 'names'}
+        onclick={() => {
+          mobileTab = 'names';
+          leftPaneView = 'names';
+        }}
       >
-        Rozdělené zobrazení
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+          <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+        </svg>
+        <span>Jmenovky (28)</span>
       </button>
+
       <button
-        class="tab-btn"
-        class:active={activeTab === 'editor'}
-        onclick={() => (activeTab = 'editor')}
+        type="button"
+        class="mobile-tab-btn"
+        class:active={mobileTab === 'settings'}
+        onclick={() => {
+          mobileTab = 'settings';
+          leftPaneView = 'settings';
+        }}
       >
-        Editor jmen (28 bytů)
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="4" y1="21" x2="4" y2="14"></line>
+          <line x1="4" y1="10" x2="4" y2="3"></line>
+          <line x1="12" y1="21" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12" y2="3"></line>
+          <line x1="20" y1="21" x2="20" y2="16"></line>
+          <line x1="20" y1="12" x2="20" y2="3"></line>
+          <line x1="1" y1="14" x2="7" y2="14"></line>
+          <line x1="9" y1="8" x2="15" y2="8"></line>
+          <line x1="17" y1="16" x2="23" y2="16"></line>
+        </svg>
+        <span>Nastavení & Sazba</span>
       </button>
+
       <button
-        class="tab-btn"
-        class:active={activeTab === 'preview'}
-        onclick={() => (activeTab = 'preview')}
+        type="button"
+        class="mobile-tab-btn"
+        class:active={mobileTab === 'preview'}
+        onclick={() => (mobileTab = 'preview')}
       >
-        Náhled tisku (A4)
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+          <line x1="8" y1="21" x2="16" y2="21"></line>
+          <line x1="12" y1="17" x2="12" y2="21"></line>
+        </svg>
+        <span>Náhled tabla (A4)</span>
       </button>
     </div>
   </div>
 
-  <main class="main-content" class:split={activeTab === 'split'}>
-    <!-- Editor Pane -->
+  <main class="main-content">
+    <!-- Left Pane (Editor or Settings Panel) -->
     <div
-      class="pane editor-pane no-print"
-      class:hidden={activeTab === 'preview'}
-      class:full-width={activeTab === 'editor'}
+      class="pane left-pane no-print"
+      class:mobile-hidden={mobileTab === 'preview'}
     >
-      <FlatList
-        {flats}
-        fontOption={currentFontOption}
-        {badgeColor}
-        {isBold}
-        {badgeStyle}
-        {textPaddingLeft}
-      />
+      <!-- Desktop Subnav Header for Left Pane -->
+      <div class="left-pane-header">
+        <div class="view-pill-group">
+          <button
+            type="button"
+            class="view-pill-btn"
+            class:active={leftPaneView === 'names'}
+            onclick={() => {
+              leftPaneView = 'names';
+              mobileTab = 'names';
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
+            </svg>
+            <span>Jmenovky (28 bytů)</span>
+          </button>
+          <button
+            type="button"
+            class="view-pill-btn"
+            class:active={leftPaneView === 'settings'}
+            onclick={() => {
+              leftPaneView = 'settings';
+              mobileTab = 'settings';
+            }}
+          >
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="4" y1="21" x2="4" y2="14"></line>
+              <line x1="4" y1="10" x2="4" y2="3"></line>
+              <line x1="12" y1="21" x2="12" y2="12"></line>
+              <line x1="12" y1="8" x2="12" y2="3"></line>
+              <line x1="20" y1="21" x2="20" y2="16"></line>
+              <line x1="20" y1="12" x2="20" y2="3"></line>
+              <line x1="1" y1="14" x2="7" y2="14"></line>
+              <line x1="9" y1="8" x2="15" y2="8"></line>
+              <line x1="17" y1="16" x2="23" y2="16"></line>
+            </svg>
+            <span>Nastavení vzhledu & sazby</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Left Pane Body -->
+      <div class="left-pane-body">
+        {#if leftPaneView === 'names'}
+          <FlatList
+            {flats}
+            fontOption={currentFontOption}
+            {badgeColor}
+            {isBold}
+            {badgeStyle}
+            {textPaddingLeft}
+          />
+        {:else}
+          <SettingsPanel
+            bind:selectedFontId
+            bind:isBold
+            bind:badgeStyle
+            bind:badgeColor
+            bind:showIds
+            bind:textPaddingLeft
+            bind:showCropMarks
+            bind:showScale
+            onClose={() => {
+              leftPaneView = 'names';
+              mobileTab = 'names';
+            }}
+          />
+        {/if}
+      </div>
     </div>
 
-    <!-- Live SVG Preview Pane -->
+    <!-- Right Pane: Live SVG Preview (ALWAYS visible on desktop!) -->
     <div
       class="pane preview-pane"
-      class:hidden={activeTab === 'editor'}
-      class:full-width={activeTab === 'preview'}
+      class:mobile-hidden={mobileTab !== 'preview'}
     >
       <TableauSvg
         {flats}
@@ -264,33 +371,43 @@
     height: 100vh;
     width: 100vw;
     position: relative;
+    overflow: hidden;
   }
 
-  .tab-bar {
+  /* Mobile Tab Bar (Hidden on desktop) */
+  .mobile-tab-bar {
     display: none;
-    background: #f1f5f9;
+    background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
-    padding: 0.25rem 1rem;
-    gap: 0.5rem;
+    padding: 0.35rem 0.5rem;
+    gap: 0.35rem;
   }
 
-  .tab-btn {
-    padding: 0.35rem 0.75rem;
+  .mobile-tab-btn {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.4rem;
     font-size: 0.8rem;
+    font-weight: 600;
     background: transparent;
-    border: none;
-    border-radius: 4px;
+    border: 1px solid transparent;
+    border-radius: 6px;
     cursor: pointer;
     color: #64748b;
-    font-weight: 500;
+    transition: all 0.15s;
+    white-space: nowrap;
   }
 
-  .tab-btn.active {
-    background: #ffffff;
-    color: #0f172a;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05);
+  .mobile-tab-btn.active {
+    background: #e0f2fe;
+    border-color: #bae6fd;
+    color: #0369a1;
   }
 
+  /* Main 2-Pane Content */
   .main-content {
     flex: 1;
     display: flex;
@@ -300,28 +417,110 @@
 
   .pane {
     height: 100%;
-    overflow: auto;
+    overflow: hidden;
     box-sizing: border-box;
+    display: flex;
+    flex-direction: column;
   }
 
-  .editor-pane {
+  /* Left Pane (Editor / Settings) */
+  .left-pane {
     flex: 1.15;
     border-right: 1px solid #e2e8f0;
     background: #f8fafc;
+    min-width: 0;
   }
 
+  .left-pane-header {
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 0.5rem 1rem;
+    display: flex;
+    align-items: center;
+    flex-shrink: 0;
+  }
+
+  .view-pill-group {
+    display: inline-flex;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    border-radius: 7px;
+    padding: 2px;
+    gap: 2px;
+  }
+
+  .view-pill-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.35rem 0.75rem;
+    border: none;
+    background: transparent;
+    border-radius: 5px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: #64748b;
+    cursor: pointer;
+    transition: all 0.12s ease-in-out;
+  }
+
+  .view-pill-btn:hover {
+    color: #0f172a;
+  }
+
+  .view-pill-btn.active {
+    background: #ffffff;
+    color: #0284c7;
+    font-weight: 600;
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+  }
+
+  .left-pane-body {
+    flex: 1;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  /* Right Pane (Live Preview) */
   .preview-pane {
     flex: 1;
-    background: #e2e8f0;
+    background: #cbd5e1;
+    min-width: 0;
+    position: relative;
   }
 
-  .pane.hidden {
-    display: none;
+  /* Responsive Rules: Mobile vs Desktop */
+  @media (max-width: 1024px) {
+    .mobile-tab-bar {
+      display: flex;
+    }
+
+    .left-pane-header {
+      display: none;
+    }
+
+    .pane.mobile-hidden {
+      display: none !important;
+    }
+
+    .pane {
+      flex: 1 !important;
+      width: 100% !important;
+      border: none !important;
+    }
   }
 
-  .pane.full-width {
-    flex: 1;
-    border: none;
+  @media (min-width: 1025px) {
+    /* Enforce split view ALWAYS on desktop! */
+    .left-pane {
+      display: flex !important;
+      flex: 1.15 !important;
+    }
+
+    .preview-pane {
+      display: flex !important;
+      flex: 1 !important;
+    }
   }
 
   .dropzone-overlay {
@@ -355,35 +554,6 @@
     margin: 0;
     font-size: 0.9rem;
     color: #64748b;
-  }
-
-  @media (max-width: 1024px) {
-    .tab-bar {
-      display: flex;
-      justify-content: center;
-      padding: 0.35rem 0.5rem;
-      gap: 0.35rem;
-    }
-
-    .tab-btn-split {
-      display: none;
-    }
-
-    .tab-btn {
-      flex: 1;
-      text-align: center;
-      padding: 0.45rem 0.6rem;
-      font-size: 0.85rem;
-      font-weight: 600;
-    }
-
-    .main-content.split .editor-pane {
-      display: flex;
-      flex: 1;
-    }
-    .main-content.split .preview-pane {
-      display: none;
-    }
   }
 
   /* True 1:1 scale A4 Landscape print rules */
@@ -424,16 +594,15 @@
       left: 0 !important;
     }
 
+    .left-pane {
+      display: none !important;
+    }
+
     .preview-pane {
-      display: block !important;
       width: 297mm !important;
       height: 210mm !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      background: #ffffff !important;
-      padding: 0 !important;
-      margin: 0 !important;
+      display: block !important;
+      background: transparent !important;
     }
   }
 </style>

@@ -29,12 +29,31 @@ Stačí otevřít soubor [`zvonky-editor.html`](zvonky-editor.html) v libovolné
 - **Chytré přizpůsobení délky textu**: Aplikace dynamicky měří šířku jména. Při delším textu automaticky zmenšuje velikost písma a v editačním formuláři zobrazuje varovné štítky:
   - `⚠️ Zmenšeno` (oranžová): text musel být zmenšen, aby se vešel.
   - `⚠️ Nevejde se` (červená): text je příliš dlouhý i při minimální čitelné velikosti písma.
-- **4 typografické šablony čísel bytů**:
-  - **Klasický štítek (vpravo)**: Zaoblený barevný obdélníček na pravé straně (původní styl z předlohy).
-  - **Technický prefix (vlevo)**: Čísla tvoří svislý sloupec na levém okraji s dělící linkou (standard ČSN a DIN 1451, ideální pro rychlé vyhledání bytu shora dolů).
-  - **Decentní index (v rohu)**: Malé elegantní číslo v pravém horním rohu, které uvolňuje hlavní osu pro dlouhá jména.
-  - **Jemný vodoznak (v pozadí)**: Velké číslo v pozadí (15 % krytí akcentní barvy), jméno prochází v popředí v plné černé barvě.
-  - **Bez čísel**: Čisté jmenovky bez čísel s maximálním prostorem pro text.
+- **5 typografických šablon čísel bytů**:
+  - **Architektonický blok (vlevo)** (`left-block`): Blok přes celou výšku slotu ($152{,}4\text{ px}$) se svislou dělící linkou a velkou č číslicí ($42\text{ px}$). Působí celistvě a sjednoceně s tělem tabla.
+  - **Klasický štítek (kontrastní badge vpravo)** (`classic`): Zaoblený obdélníček s číslem bytu přesně vycentrovaný v ose slotu a s bezpečným $23\text{ px}$ odstupem od pravého okraje.
+  - **Čistá typografie (číslo vpravo)** (`inline-num`): Moderní číslo bytu ($36\text{ px}$) bez rámečku či podkladu, čistý styl.
+  - **Jemný vodoznak (v pozadí)** (`watermark`): Velké ušlechtilé číslo ($84\text{ px}$) v tónu podkladu se zachováním zvolené barvy, neruší čtení jména v popředí.
+  - **Bez čísel bytů** (`none`): Maximální šířka pro dlouhá jména a akademické tituly ($554\text{ px}$).
+
+<p align="center">
+  <img src="docs/badge_styles_preview.png" alt="Ukázky typografických šablon štítků" width="680" />
+</p>
+
+- **Integrovaný panel Nastavení se živým náhledem**:
+  - Přepínač v levém panelu umožňuje plynule přepínat mezi zadáváním jmenovek a detailním nastavením vzhledu, písma a sazby.
+  - **Živý vzorový štítek (1:1 náhled)**: Horní karta v nastavení okamžitě vizualizuje libovolnou změnu barvy, fontu či odsazení.
+  - Na desktopu zůstává živé celkové tablo na pravé straně **neustále viditelné a interaktivní**.
+- **Sdílení a záloha konfigurace (YAML / Text)**:
+  - Kompletní stav (písmo, tučnost, šablona, barva, sazba, ořezové značky, měřítko) lze jedním kliknutím zkopírovat ve formátu YAML a předat kolegům či sousedům, nebo vložit cizí konfiguraci.
+- **Plná podpora pro mobilní zařízení**:
+  - Na telefonech a tabletech ($\le 900\text{ px}$) se 3 sloupce automaticky skládají do 1 přehledného sloupce s velkými dotykovými poli pro pohodlné psaní.
+  - Přepínač záložek na mobilu umožňuje rychlý přechod mezi **Jmenovky (28)**, **Nastavení & Sazba** a **Náhled tabla (A4)**.
+  - Při přechodu na desktop se automaticky obnoví plnohodnotné rozdělené zobrazení obou panelů vedle sebe.
+
+<p align="center">
+  <img src="docs/app_settings_view.png" alt="Integrované rozhraní se živým náhledem" width="780" />
+</p>
 - **Vnější ořezové značky (Crop marks)**: Volitelné jemné značky v rozích sloupců mimo tiskovou oblast pro přesné a rychlé řezání pravítkem nebo pákovou řezačkou.
 - **Hromadné vložení seznamu (Vložit text)**: Dialog pro zkopírování 28 řádků ze schránky (z Wordu, e-mailu) a okamžité naplnění celého tabla.
 - **Klávesová navigace**: Klávesa `Enter` v editačním políčku automaticky posouvá kurzor na další řádek / byt.

@@ -15,6 +15,7 @@
     BADGE_RX,
     BADGE_FONT_SIZE,
     DEFAULT_TEXT_PADDING_LEFT,
+    getWatermarkStyle,
   } from '../lib/tableauConfig';
   import {
     IOSEVKA_SEMIBOLD_WOFF,
@@ -80,6 +81,7 @@
     dividerY1: number;
     dividerY2: number;
     opacity: number;
+    color: string;
   }
 
   const cards = $derived(
@@ -146,6 +148,7 @@
           dividerY1: coords.slotTop,
           dividerY2: coords.slotBottom,
           opacity: 1,
+          color: badgeColor,
         } as RenderBadge;
       }
 
@@ -166,11 +169,12 @@
           dividerY1: 0,
           dividerY2: 0,
           opacity: 1,
+          color: '#000000',
         } as RenderBadge;
       }
 
       if (badgeStyle === 'watermark') {
-        const isPale = badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0';
+        const wm = getWatermarkStyle(badgeColor);
         return {
           id: entry.id,
           idStr,
@@ -186,7 +190,8 @@
           dividerX: 0,
           dividerY1: 0,
           dividerY2: 0,
-          opacity: isPale ? 0.35 : 0.45,
+          opacity: wm.opacity,
+          color: wm.fill,
         } as RenderBadge;
       }
 
@@ -209,6 +214,7 @@
         dividerY1: 0,
         dividerY2: 0,
         opacity: 1,
+        color: badgeColor,
       } as RenderBadge;
     })
   );
@@ -490,7 +496,7 @@
                     y="{badge.textY.toFixed(2)}px"
                     text-anchor="middle"
                     class="badge-text"
-                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {(badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0') ? '#475569' : badgeColor}; opacity: {badge.opacity};"
+                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {badge.color}; opacity: {badge.opacity};"
                   >
                     {badge.idStr}
                   </text>

@@ -221,6 +221,23 @@ export function flatIdToSlot(flatId: number): { col: number; row: number } {
   return { col, row };
 }
 
+export function getWatermarkStyle(badgeColor: string): { fill: string; opacity: number } {
+  if (badgeColor.toUpperCase() === '#FFFFFF') {
+    return { fill: '#64748b', opacity: 0.28 };
+  }
+  let r = 0, g = 0, b = 0;
+  const hex = badgeColor.replace('#', '');
+  if (hex.length === 6) {
+    r = parseInt(hex.substring(0, 2), 16);
+    g = parseInt(hex.substring(2, 4), 16);
+    b = parseInt(hex.substring(4, 6), 16);
+  }
+  const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  // Pastel colors need higher opacity (0.70-0.85) to show on white paper; dark colors need 0.25-0.35
+  const opacity = Math.min(0.85, Math.max(0.25, Math.round((0.20 + lum * 0.65) * 100) / 100));
+  return { fill: badgeColor, opacity };
+}
+
 export function getSlotCoordinates(
   col: number,
   row: number,
