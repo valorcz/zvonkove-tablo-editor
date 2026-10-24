@@ -25,13 +25,13 @@ export const DEFAULT_FS_DOUBLE = 48.0;
 export const MIN_FONT_SIZE = 24.0;
 export const WARNING_FONT_SIZE_THRESHOLD = 30.0;
 
-export const BADGE_WIDTH = 60.0;
+export const BADGE_WIDTH = 62.0;
 export const BADGE_HEIGHT = 54.0;
-export const BADGE_RX = 10.0;
+export const BADGE_RX = 8.0;
 export const DEFAULT_BADGE_FILL = '#FFE6C7';
-export const BADGE_FONT_SIZE = 40.6;
-export const BADGE_OFFSET_X = 671.1;
-export const BADGE_TOP_OFFSET_Y = 36.0;
+export const BADGE_FONT_SIZE = 38.0;
+export const BADGE_OFFSET_X = 650.0; // Leaves 23px clearance from slot right edge (colX + 703.96)
+export const BADGE_TOP_OFFSET_Y = 0.0; // Vertically centered at slotCenterY
 
 export const BADGE_STYLES: BadgeStyleOption[] = [
   {
@@ -98,7 +98,7 @@ export function getStyleMetrics(
     case 'classic':
     default: {
       const startX = slotLeft + textPaddingLeft;
-      const rightLimit = slotRight - 92.0; // reserve space for 60px badge + 32px margins
+      const rightLimit = 604.0; // Reserve space for 62px badge + 23px margin + 15px clearance
       const maxWidth = Math.max(250.0, rightLimit - startX);
       return { textLeftPadding: startX, maxTextWidth: maxWidth };
     }
@@ -151,6 +151,70 @@ export const FONT_OPTIONS: FontOption[] = [
   },
 ];
 
+export interface TableauAppSettings {
+  font: string;
+  bold: boolean;
+  badgeStyle: BadgeStyleId;
+  badgeColor: string;
+  showIds: boolean;
+  textPaddingLeft: number;
+  showCropMarks: boolean;
+  showScale: boolean;
+}
+
+export function serializeSettingsYAML(settings: TableauAppSettings): string {
+  return [
+    `# Konfigurace zvonkového tabla Tesla / GUARD prima`,
+    `font: ${settings.font}`,
+    `bold: ${settings.bold}`,
+    `badgeStyle: ${settings.badgeStyle}`,
+    `badgeColor: "${settings.badgeColor}"`,
+    `showIds: ${settings.showIds}`,
+    `textPaddingLeft: ${settings.textPaddingLeft}`,
+    `showCropMarks: ${settings.showCropMarks}`,
+    `showScale: ${settings.showScale}`,
+  ].join('\n');
+}
+
+export function parseSettingsYAML(text: string): Partial<TableauAppSettings> | null {
+  try {
+    const trimmed = text.trim();
+    if (trimmed.startsWith('{')) {
+      const parsed = JSON.parse(trimmed);
+      return {
+        font: parsed.font || parsed.selectedFontId,
+        bold: typeof parsed.bold === 'boolean' ? parsed.bold : parsed.isBold,
+        badgeStyle: parsed.badgeStyle,
+        badgeColor: parsed.badgeColor,
+        showIds: parsed.showIds,
+        textPaddingLeft: parsed.textPaddingLeft,
+        showCropMarks: parsed.showCropMarks,
+        showScale: parsed.showScale,
+      };
+    }
+    const result: Record<string, any> = {};
+    const lines = trimmed.split(/\r?\n/);
+    for (const line of lines) {
+      const clean = line.replace(/#.*$/, '').trim();
+      if (!clean) continue;
+      const colonIdx = clean.indexOf(':');
+      if (colonIdx === -1) continue;
+      const key = clean.slice(0, colonIdx).trim();
+      let val = clean.slice(colonIdx + 1).trim();
+      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+        val = val.slice(1, -1);
+      }
+      if (val === 'true') result[key] = true;
+      else if (val === 'false') result[key] = false;
+      else if (!isNaN(Number(val)) && val !== '') result[key] = Number(val);
+      else result[key] = val;
+    }
+    return result as Partial<TableauAppSettings>;
+  } catch {
+    return null;
+  }
+}
+
 export function flatIdToSlot(flatId: number): { col: number; row: number } {
   const col = Math.floor((flatId - 1) / 10);
   const row = (col + 1) * 10 - flatId;
@@ -179,7 +243,7 @@ export function getSlotCoordinates(
     slotBottom,
     slotCenterY,
     badgeCx: colX + BADGE_OFFSET_X,
-    badgeCy: slotTop + BADGE_TOP_OFFSET_Y,
+    badgeCy: slotCenterY,
   };
 }
 

@@ -170,6 +170,7 @@
       }
 
       if (badgeStyle === 'watermark') {
+        const isPale = badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0';
         return {
           id: entry.id,
           idStr,
@@ -179,13 +180,13 @@
           rectH: 0,
           rx: 0,
           cx: coords.colX + 636.0,
-          textY: coords.slotCenterY + 26.0,
-          fontSize: 78,
+          textY: coords.slotCenterY + 28.0,
+          fontSize: 84,
           showDivider: false,
           dividerX: 0,
           dividerY1: 0,
           dividerY2: 0,
-          opacity: 0.25,
+          opacity: isPale ? 0.35 : 0.45,
         } as RenderBadge;
       }
 
@@ -201,7 +202,7 @@
         rectH: BADGE_HEIGHT,
         rx: BADGE_RX,
         cx,
-        textY: cy + 0.36 * BADGE_FONT_SIZE,
+        textY: cy + 13.0,
         fontSize: BADGE_FONT_SIZE,
         showDivider: false,
         dividerX: 0,
@@ -489,7 +490,7 @@
                     y="{badge.textY.toFixed(2)}px"
                     text-anchor="middle"
                     class="badge-text"
-                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {badgeColor === '#FFFFFF' ? '#94a3b8' : badgeColor}; opacity: {badge.opacity};"
+                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {(badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0') ? '#475569' : badgeColor}; opacity: {badge.opacity};"
                   >
                     {badge.idStr}
                   </text>

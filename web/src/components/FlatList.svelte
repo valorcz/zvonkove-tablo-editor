@@ -92,12 +92,20 @@
                 onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
-                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
+                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Nevejde se
+                </span>
               {:else if status === 'tight'}
-                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">⚠️ Zmenšeno</span>
+                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Zmenšeno
+                </span>
               {/if}
               {#if flat.name1 || flat.name2}
-                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>✕</button>
+                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               {/if}
             </div>
             <input
@@ -142,12 +150,20 @@
                 onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
-                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
+                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Nevejde se
+                </span>
               {:else if status === 'tight'}
-                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">⚠️ Zmenšeno</span>
+                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Zmenšeno
+                </span>
               {/if}
               {#if flat.name1 || flat.name2}
-                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>✕</button>
+                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               {/if}
             </div>
             <input
@@ -192,12 +208,20 @@
                 onkeydown={(e) => handleKeyDown(e, fid, 'name1')}
               />
               {#if status === 'overflow'}
-                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">⚠️ Nevejde se</span>
+                <span class="warning-tag overflow" title="Text je příliš dlouhý a přetéká štítek!">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Nevejde se
+                </span>
               {:else if status === 'tight'}
-                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">⚠️ Zmenšeno</span>
+                <span class="warning-tag tight" title="Písmo muselo být výrazně zmenšeno">
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  Zmenšeno
+                </span>
               {/if}
               {#if flat.name1 || flat.name2}
-                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>✕</button>
+                <button type="button" class="clear-btn" title="Vymazat jména" onclick={() => clearFlat(flat)}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                </button>
               {/if}
             </div>
             <input
@@ -350,14 +374,17 @@
   }
 
   .clear-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     background: none;
     border: none;
     color: #94a3b8;
     cursor: pointer;
-    font-size: 0.75rem;
-    padding: 0.2rem 0.35rem;
+    padding: 0.2rem;
     border-radius: 3px;
     line-height: 1;
+    transition: all 0.15s;
   }
 
   .clear-btn:hover {
@@ -366,6 +393,9 @@
   }
 
   .warning-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.25rem;
     font-size: 0.68rem;
     font-weight: 600;
     padding: 0.15rem 0.35rem;
@@ -384,5 +414,37 @@
     background: #fee2e2;
     color: #991b1b;
     border: 1px solid #fecaca;
+  }
+
+  @media (max-width: 900px) {
+    .flat-list-columns {
+      grid-template-columns: 1fr;
+      gap: 1.25rem;
+      padding: 0.75rem;
+    }
+
+    .flat-row {
+      padding: 0.65rem;
+      gap: 0.65rem;
+    }
+
+    .flat-badge {
+      width: 2.3rem;
+      height: 2rem;
+      font-size: 0.95rem;
+    }
+
+    .name-input {
+      padding: 0.45rem 0.65rem;
+      font-size: 0.95rem;
+    }
+
+    .name-input.secondary {
+      font-size: 0.85rem;
+    }
+
+    .clear-btn {
+      padding: 0.35rem;
+    }
   }
 </style>

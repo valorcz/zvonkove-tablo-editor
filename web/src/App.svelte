@@ -172,7 +172,7 @@
     />
     <div class="tab-bar">
       <button
-        class="tab-btn"
+        class="tab-btn tab-btn-split"
         class:active={activeTab === 'split'}
         onclick={() => (activeTab = 'split')}
       >
@@ -183,7 +183,7 @@
         class:active={activeTab === 'editor'}
         onclick={() => (activeTab = 'editor')}
       >
-        Pouze editor jmen
+        Editor jmen (28 bytů)
       </button>
       <button
         class="tab-btn"
@@ -360,6 +360,21 @@
   @media (max-width: 1024px) {
     .tab-bar {
       display: flex;
+      justify-content: center;
+      padding: 0.35rem 0.5rem;
+      gap: 0.35rem;
+    }
+
+    .tab-btn-split {
+      display: none;
+    }
+
+    .tab-btn {
+      flex: 1;
+      text-align: center;
+      padding: 0.45rem 0.6rem;
+      font-size: 0.85rem;
+      font-weight: 600;
     }
 
     .main-content.split .editor-pane {

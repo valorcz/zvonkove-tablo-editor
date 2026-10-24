@@ -100,17 +100,19 @@ export function generateFullSVG(
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'watermark') {
       const textX = coords.colX + 636.0;
-      const textY = coords.slotCenterY + 26.0;
-      const wmColor = badgeColor === '#FFFFFF' ? '#94a3b8' : badgeColor;
+      const textY = coords.slotCenterY + 28.0;
+      const isPale = badgeColor === '#FFFFFF' || badgeColor === '#FFE6C7' || badgeColor === '#FEF3C7' || badgeColor === '#E2E8F0';
+      const wmColor = isPale ? '#475569' : badgeColor;
+      const wmOpacity = isPale ? '0.35' : '0.45';
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:78px;fill:${wmColor};opacity:0.25;">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:84px;fill:${wmColor};opacity:${wmOpacity};">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'classic') {
       const cx = coords.badgeCx;
       const cy = coords.badgeCy;
       const rectX = cx - BADGE_WIDTH / 2.0;
       const rectY = cy - BADGE_HEIGHT / 2.0;
-      const badgeTextY = cy + 0.36 * BADGE_FONT_SIZE;
+      const badgeTextY = cy + 13.0;
 
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
       badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
