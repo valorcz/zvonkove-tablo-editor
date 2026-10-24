@@ -54,12 +54,19 @@
     downloadFile(svg, `zvonky-tablo-${date}.svg`, 'image/svg+xml;charset=utf-8;');
   }
 
+  let showPrintModal = $state(false);
+
   function handlePrint() {
+    showPrintModal = true;
+  }
+
+  function handleConfirmPrint() {
+    showPrintModal = false;
     window.print();
   }
 
   function handleReset() {
-    if (confirm('Opravdu chcete obnovit původní výchozí jména z října 2026?')) {
+    if (confirm('Opravdu chcete obnovit výchozí vzorová jména?')) {
       flats = createDefaultFlats();
       badgeColor = DEFAULT_BADGE_FILL;
       selectedFontId = 'TechnicNT';
@@ -82,7 +89,7 @@
     <div class="logo-icon">🔔</div>
     <div>
       <h1 class="title">Zvonkové tablo Tesla / GUARD prima</h1>
-      <span class="subtitle">Bělohorská 95 (A4 na šířku, 28 zvonků)</span>
+      <span class="subtitle">28 zvonků (A4 na šířku, 3 sloupce)</span>
     </div>
   </div>
 
@@ -193,6 +200,65 @@
     </button>
   </div>
 </header>
+
+{#if showPrintModal}
+  <!-- svelte-ignore a11y_click_events_have_key_events -->
+  <!-- svelte-ignore a11y_no_static_element_interactions -->
+  <div class="modal-backdrop no-print" onclick={() => (showPrintModal = false)}>
+    <div class="modal-card" onclick={(e) => e.stopPropagation()}>
+      <div class="modal-header">
+        <span class="modal-icon">🖨️</span>
+        <h3 class="modal-title">Důležité pro tisk v přesném měřítku 1:1</h3>
+      </div>
+      <div class="modal-body">
+        <p class="modal-lead">V dialogu tisku prohlížeče je nutné zkontrolovat nastavení:</p>
+        <ul class="modal-list">
+          <li>
+            <strong>1. Okraje (Margins):</strong> nastavte na <strong>Žádné (None / 0 mm)</strong>
+            <div class="modal-hint">
+              ⚠️ Pokud ponecháte „Výchozí“ (Default), prohlížeč zmenší stránku na cca 90 % a kalibrační měřítko bude mít jen necelých 9 cm místo 10 cm!
+            </div>
+          </li>
+          <li>
+            <strong>2. Měřítko (Scale):</strong> nastavte na <strong>100 %</strong> nebo <strong>Skutečná velikost (Actual size)</strong>
+          </li>
+          <li>
+            <strong>3. Grafika na pozadí (Background graphics):</strong> zaškrtněte <strong>Povolit</strong>
+          </li>
+        </ul>
+        <div class="modal-alt-box">
+          💡 <em>Tip: Můžete si také stáhnout tiskové SVG soubor (má rozměry 297 × 210 mm napevno definované) a vytisknout jej z libovolného vektorového prohlížeče či editoru.</em>
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button
+          type="button"
+          class="btn btn-ghost"
+          onclick={() => (showPrintModal = false)}
+        >
+          Zrušit
+        </button>
+        <button
+          type="button"
+          class="btn btn-secondary"
+          onclick={() => {
+            showPrintModal = false;
+            handleExportSVG();
+          }}
+        >
+          Stáhnout tiskové SVG (1:1)
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          onclick={handleConfirmPrint}
+        >
+          Otevřít tiskový dialog
+        </button>
+      </div>
+    </div>
+  </div>
+{/if}
 
 <style>
   .app-header {
@@ -388,6 +454,95 @@
   .toggle-label input {
     cursor: pointer;
     accent-color: #0284c7;
+  }
+
+  /* Print guidance modal */
+  .modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.6);
+    backdrop-filter: blur(4px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 2000;
+    padding: 1rem;
+    box-sizing: border-box;
+  }
+
+  .modal-card {
+    background: #ffffff;
+    border-radius: 12px;
+    max-width: 540px;
+    width: 100%;
+    padding: 1.75rem 2rem;
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.25);
+    box-sizing: border-box;
+  }
+
+  .modal-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 1rem;
+  }
+
+  .modal-icon {
+    font-size: 1.75rem;
+  }
+
+  .modal-title {
+    margin: 0;
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: #0f172a;
+  }
+
+  .modal-lead {
+    margin: 0 0 0.85rem;
+    font-size: 0.925rem;
+    color: #334155;
+    font-weight: 500;
+  }
+
+  .modal-list {
+    margin: 0 0 1.25rem;
+    padding-left: 1.25rem;
+    font-size: 0.875rem;
+    color: #1e293b;
+    display: flex;
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
+  .modal-hint {
+    margin-top: 0.25rem;
+    padding: 0.4rem 0.6rem;
+    background: #fef2f2;
+    border-left: 3px solid #ef4444;
+    border-radius: 4px;
+    color: #991b1b;
+    font-size: 0.8rem;
+    line-height: 1.35;
+  }
+
+  .modal-alt-box {
+    background: #f0fdf4;
+    border: 1px solid #bbf7d0;
+    border-radius: 6px;
+    padding: 0.65rem 0.85rem;
+    font-size: 0.825rem;
+    color: #166534;
+    line-height: 1.4;
+    margin-bottom: 1.5rem;
+  }
+
+  .modal-footer {
+    display: flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    flex-wrap: wrap;
   }
 
   @media print {

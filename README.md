@@ -1,8 +1,8 @@
-# Zvonkové tablo Tesla / GUARD prima – Bělohorská 95
+# Zvonkové tablo Tesla / GUARD prima (28 bytů)
 
-Interaktivní webový editor a generátor tiskových podkladů pro jmenovky zvonkového tabla bytového domu **Bělohorská 95, Praha 6**.
+Interaktivní webový editor a generátor tiskových podkladů pro jmenovky zvonkového tabla bytového domu.
 
-Aplikace je navržena pro tablo **Tesla / GUARD prima** s 28 byty a umožňuje snadnou editaci jmenovek, import/export CSV, vizuální kontrolu a tisk na formát **A4 na šířku v přesném měřítku 1:1**.
+Aplikace je navržena pro zvonkové tablo **Tesla / GUARD prima** s 28 byty (3 sloupce: 10 + 10 + 8 zvonků) a umožňuje snadnou editaci jmenovek, import/export CSV, vizuální kontrolu v reálném čase a tisk na formát **A4 na šířku v přesném fyzickém měřítku 1:1**.
 
 ---
 
@@ -25,20 +25,20 @@ Stačí otevřít soubor [`zvonky-editor.html`](zvonky-editor.html) v libovolné
   - **Iosevka** – úzký monospace font se strojovým vzhledem.
   - **Futura** – geometrický bezpatkový font.
 - **Přepínač řezu písma (`B`)**: Okamžité přepnutí mezi základním (Regular) a tučným (Bold) řezem.
-- **Podpora dvouřádkových jmenovek**: Pokud štítek obsahuje více jmen, stačí je oddělit lomítkem (např. `Jan Novák / Marie Nováková`). Text se automaticky zarovná do dvou řádků.
+- **Podpora dvouřádkových jmenovek**: Pokud štítek obsahuje více jmen, stačí je oddělit lomítkem nebo středníkem (např. `Jan Novák / Marie Nováková`). Text se automaticky zalomí a vystředí do dvou řádků.
 - **Chytré přizpůsobení délky textu**: Aplikace dynamicky měří šířku jména. Při delším textu automaticky zmenšuje velikost písma a v editačním formuláři zobrazuje varovné štítky:
   - `⚠️ Zmenšeno` (oranžová): text musel být zmenšen, aby se vešel.
   - `⚠️ Nevejde se` (červená): text je příliš dlouhý i při minimální čitelné velikosti písma.
 - **Plovoucí Zoom & Focus widget**:
   - Krokování lupy (`−` a `+`) v rozsahu 50 % až 400 %.
   - Kliknutí na procenta (`{zoom}%`) **okamžitě obnoví celkový pohled na celou A4**.
-  - Tlačítka **`Sloupec 1`**, **`Sloupec 2`**, **`Sloupec 3`** pro okamžité přiblížení na 260 % a automatické vystředění konkrétního sloupce pro detailní kontrolu.
+  - Tlačítka **`Sloupec 1`**, **`Sloupec 2`**, **`Sloupec 3`** pro okamžité přiblížení na 260 % a automatické vystředění konkrétního sloupce pro detailní kontrolu jmen.
 - **Čísla bytů (Flat IDs) pro montáž**: Volitelné podkresové štítky s čísly bytů (`01`–`28`) usnadňující osazování do fyzického tabla. Barva podkladu čísel je nastavitelná přes paletu nebo předvolby (výchozí broskvová `#FFE6C7`, modrá, žlutá, šedá, bílá). Ve výchozím stavu jsou skryté.
 - **Tiskové kalibrační pravítko 100 mm**: Umístěno ve spodním okraji stránky pro fyzické ověření pravítkem, že tiskárna nezmenšila ani nezvětšila měřítko.
 - **Práce s daty a automatické ukládání**:
   - Drag & Drop CSV souboru přímo do okna prohlížeče.
   - Tlačítka **Nahrát CSV** a **Stáhnout CSV**.
-  - Tlačítko **Stáhnout SVG** (vygeneruje samostatné tiskové SVG se všemi vloženými fonty).
+  - Tlačítko **Stáhnout SVG** (vygeneruje samostatné tiskové SVG se všemi vloženými fonty a pevnými rozměry 297 × 210 mm).
   - Průběžné automatické ukládání změn do `localStorage` prohlížeče.
 
 ---
@@ -59,16 +59,19 @@ Tablo odpovídá fyzickému uspořádání Tesla / GUARD prima pro 28 bytů (3 s
 
 ---
 
-## 🖨️ Pokyny pro bezchybný tisk
+## 🖨️ Pokyny pro bezchybný tisk v měřítku 1:1
 
-Při tisku přímo z prohlížeče (tlačítko **Tisk / PDF** nebo klávesová zkratka `Ctrl+P` / `Cmd+P`):
+Při tisku přímo z prohlížeče (tlačítko **Tisk / PDF** nebo klávesová zkratka `Ctrl+P` / `Cmd+P`) je zásadní správné nastavení v tiskovém okně prohlížeče:
 
-1. **Orientace**: Na šířku (*Landscape*).
-2. **Formát papíru**: A4.
-3. **Měřítko**: **100 %** nebo **Skutečná velikost** (*Actual size*). **Nikdy nepoužívejte** volbu *„Přizpůsobit stránce“* (*Fit to page*), došlo by ke zkreslení fyzických rozměrů!
-4. **Okraje**: **Žádné** (*None* / *0 mm*).
+1. **Okraje (Margins)**: Nastavte na **Žádné (None / 0 mm)**!
+   > ⚠️ **Pozor na výchozí nastavení prohlížeče:** Pokud v tiskovém dialogu ponecháte volbu *„Výchozí“ (Default)*, prohlížeč automaticky přidá cca 10mm okraje a zmenší celou stránku na cca 90 %. Vytištěné 100mm měřítko by pak mělo jen necelých 9 cm! Nastavením *Žádné* se tiskne v přesném poměru 1:1.
+2. **Měřítko (Scale)**: Nastavte na **100 %** nebo **Skutečná velikost** (*Actual size*). Nikdy nepoužívejte volbu *„Přizpůsobit stránce“* (*Fit to printable area*).
+3. **Orientace**: Na šířku (*Landscape*).
+4. **Formát papíru**: A4.
 5. **Grafika na pozadí**: Zaškrtněte **Povolit grafiku na pozadí** (*Background graphics*), aby se vytiskly ořezové rámečky.
-6. **Kontrola přesnosti**: Po vytištění změřte pravítkem 100mm měřítko ve spodní části stránky. Pokud měří přesně 10 cm, štítky budou dokonale pasovat do drážek tabla.
+6. **Fyzická kontrola**: Po vytištění změřte pravítkem 100mm kalibrační měřítko ve spodní části stránky. Musí měřit přesně 10 cm.
+
+💡 *Alternativa:* Můžete také použít tlačítko **Stáhnout SVG**. Vygenerovaný SVG soubor má fyzické rozměry $297 \times 210\text{ mm}$ pevně zadané přímo v hlavičce a vytiskne se v přesném měřítku 1:1 v libovolném vektorovém programu (Inkscape, Affinity Designer, Illustrator) i v prohlížeči.
 
 ---
 
@@ -110,14 +113,9 @@ make clean            # Odstraní build artefakty a dočasné cache
 ```
 ├── Makefile                                    # Sada příkazů pro vývoj, kontrolu a údržbu
 ├── README.md                                   # Dokumentace projektu v češtině
-├── .gitignore                                  # Pravidla pro Git (ignoruje node_modules, dist, cache)
+├── .gitignore                                  # Pravidla pro Git (ignoruje node_modules, dist, cache, deprecated/)
 ├── zvonky-editor.html                          # Samostatná offline HTML aplikace (distribuce)
-├── sample_jmenovky.csv                         # Ukázkový CSV soubor s byty 01–28
-├── bělohorská-zvonky-jmenovky.svg              # Původní SVG předloha
-├── bělohorská-zvonky-jmenovky-říjen-2026.svg   # Exportované tablo s novými jmenovkami
-├── bělohorská-zvonky-jmenovky.afdesign         # Původní Affinity Designer zdroj
-├── bělohorská-zvonky-jmenovky-červenec-2025.pdf# Původní tiskové PDF
-├── jmenovkyGUARDprima.pdf                      # Výrobní dokumentace tabla GUARD prima
+├── sample_jmenovky.csv                         # Vzorový CSV soubor s fiktivními jmény pro byty 01–28
 └── web/                                        # Zdrojový kód webové aplikace
     ├── package.json                            # Konfigurace balíčků a skriptů
     ├── pnpm-lock.yaml                          # Uzamčené verze závislostí
@@ -132,12 +130,12 @@ make clean            # Odstraní build artefakty a dočasné cache
         │   ├── embeddedAssets.ts               # Base64 data URI fontů pro SVG export
         │   └── fonts/                          # Optimalizované WOFF fonty (Technic NT, DIN, Fira, Iosevka)
         ├── components/
-        │   ├── Header.svelte                   # Horní lišta (fonty, řezy, barvy, import/export, tisk)
+        │   ├── Header.svelte                   # Horní lišta (fonty, řezy, barvy, import/export, tiskové okno)
         │   ├── FlatList.svelte                 # Editační panel pro 28 bytů s detekcí přetečení
         │   └── TableauSvg.svelte               # SVG náhled tabla s plovoucí zoomovací lištou
         └── lib/
-            ├── csvParser.ts                    # Import a export CSV formátu
-            ├── svgGenerator.ts                 # Generátor samostatného tiskového SVG
+            ├── csvParser.ts                    # Import a export CSV formátu (výchozí vzorová jména)
+            ├── svgGenerator.ts                 # Generátor samostatného tiskového SVG (297 × 210 mm)
             ├── tableauConfig.ts                # Geometrie, souřadnice sloupců a šablony
             └── types.ts                        # TypeScript definice
 ```

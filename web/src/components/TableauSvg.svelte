@@ -174,23 +174,25 @@
     zoomLevel = 2.6;
     await tick();
 
-    if (!viewportEl) return;
-    const scrollW = viewportEl.scrollWidth;
-    const viewW = viewportEl.clientWidth;
+    requestAnimationFrame(() => {
+      if (!viewportEl) return;
+      const scrollW = viewportEl.scrollWidth;
+      const viewW = viewportEl.clientWidth;
 
-    // Horizontal centers relative to total 3508px width:
-    // Col 1 center = 639.5 / 3508 = 0.1823
-    // Col 2 center = 1701.5 / 3508 = 0.4850
-    // Col 3 center = 2763.5 / 3508 = 0.7878
-    let targetRatio = 0.1823;
-    if (colKey === 'col2') targetRatio = 0.485;
-    if (colKey === 'col3') targetRatio = 0.7878;
+      // Horizontal centers relative to total 3508px width:
+      // Col 1 center = 639.5 / 3508 = 0.1823
+      // Col 2 center = 1701.5 / 3508 = 0.4850
+      // Col 3 center = 2763.5 / 3508 = 0.7878
+      let targetRatio = 0.1823;
+      if (colKey === 'col2') targetRatio = 0.485;
+      if (colKey === 'col3') targetRatio = 0.7878;
 
-    const targetX = targetRatio * scrollW - viewW / 2;
-    viewportEl.scrollTo({
-      left: Math.max(0, targetX),
-      top: 0,
-      behavior: 'smooth',
+      const targetX = targetRatio * scrollW - viewW / 2;
+      viewportEl.scrollTo({
+        left: Math.max(0, targetX),
+        top: 0,
+        behavior: 'smooth',
+      });
     });
   }
 
@@ -567,20 +569,15 @@
     width: 100%;
     height: 100%;
     overflow: auto;
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
+    display: block;
     padding: 4.5rem 1.5rem 1.5rem 1.5rem;
     box-sizing: border-box;
   }
 
   .svg-canvas-box {
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    display: block;
+    margin: 0 auto;
     max-width: none;
-    transition: width 0.2s ease-out;
-    margin: auto;
   }
 
   svg {
@@ -594,45 +591,45 @@
   }
 
   @media print {
+    *, *:before, *:after {
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
+    }
+
     .no-print {
       display: none !important;
     }
 
-    .preview-wrapper {
+    .preview-wrapper,
+    .svg-scroll-viewport,
+    .svg-canvas-box {
       background: none !important;
       padding: 0 !important;
       margin: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
       display: block !important;
       position: absolute !important;
       top: 0 !important;
       left: 0 !important;
-    }
-
-    .svg-scroll-viewport {
-      padding: 0 !important;
-      margin: 0 !important;
       overflow: hidden !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      display: block !important;
-    }
-
-    .svg-canvas-box {
-      width: 100vw !important;
-      height: 100vh !important;
-      margin: 0 !important;
     }
 
     svg {
       box-shadow: none !important;
       border-radius: 0 !important;
-      width: 100vw !important;
-      height: 100vh !important;
-      position: absolute;
-      top: 0;
-      left: 0;
+      width: 297mm !important;
+      height: 210mm !important;
+      min-width: 297mm !important;
+      min-height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
+      position: absolute !important;
+      top: 0 !important;
+      left: 0 !important;
+      display: block !important;
     }
   }
 </style>

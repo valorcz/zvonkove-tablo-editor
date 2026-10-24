@@ -1,4 +1,4 @@
-# Makefile pro Zvonkové tablo Tesla (Bělohorská 95)
+# Makefile pro Zvonkové tablo Tesla / GUARD prima
 SHELL := /usr/bin/env bash
 PNPM ?= pnpm
 WEB_DIR := web
@@ -7,7 +7,7 @@ WEB_DIR := web
 
 .PHONY: help
 help: ## Zobrazit tuto nápovědu
-	@echo -e "\033[1;34mZvonkové tablo Tesla (Bělohorská 95) - Příkazy pro vývoj a údržbu\033[0m"
+	@echo -e "\033[1;34mZvonkové tablo Tesla / GUARD prima - Příkazy pro vývoj a údržbu\033[0m"
 	@echo ""
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "  \033[36m%-20s\033[0m %s\n", $$1, $$2}'
 

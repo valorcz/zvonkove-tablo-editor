@@ -26,3 +26,6 @@ pnpm-debug.log*
 .env
 .env.local
 .env.*.local
+
+# Deprecated legacy files and templates (not tracked for public release)
+deprecated/

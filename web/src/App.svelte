@@ -6,7 +6,7 @@
   import { FONT_OPTIONS, DEFAULT_BADGE_FILL } from './lib/tableauConfig';
   import type { FlatEntry } from './lib/types';
 
-  const STORAGE_KEY = 'zvonky_tablo_state_v3';
+  const STORAGE_KEY = 'zvonky_tablo_sample_v1';
 
   function loadInitialState(): {
     flats: FlatEntry[];
@@ -318,7 +318,7 @@
 
   /* True 1:1 scale A4 Landscape print rules */
   @page {
-    size: A4 landscape;
+    size: 297mm 210mm;
     margin: 0;
   }
 
