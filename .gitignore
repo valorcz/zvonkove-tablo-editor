@@ -29,3 +29,8 @@ pnpm-debug.log*
 
 # Deprecated legacy files and templates (not tracked for public release)
 deprecated/
+
+# Local real resident data (kept private, excluded from git)
+jmenovky.csv
+*.local.csv
+*.private.csv

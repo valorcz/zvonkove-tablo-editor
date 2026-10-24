@@ -6,17 +6,32 @@
   import { FONT_OPTIONS, DEFAULT_BADGE_FILL } from './lib/tableauConfig';
   import type { FlatEntry } from './lib/types';
 
-  const STORAGE_KEY = 'zvonky_tablo_sample_v1';
+  const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
+  const LEGACY_STORAGE_KEYS = [
+    'zvonky_tablo_state_v3',
+    'zvonky_tablo_state_v2',
+    'zvonky_tablo_sample_v1',
+  ];
 
-  function loadInitialState(): {
+  interface StoredState {
     flats: FlatEntry[];
     badgeColor: string;
     selectedFontId: string;
     isBold: boolean;
     showScale: boolean;
-  } {
+    showIds: boolean;
+    activeTab: 'split' | 'editor' | 'preview';
+  }
+
+  function loadInitialState(): StoredState {
     try {
-      const saved = localStorage.getItem(STORAGE_KEY);
+      let saved = localStorage.getItem(STORAGE_KEY);
+      if (!saved) {
+        for (const key of LEGACY_STORAGE_KEYS) {
+          saved = localStorage.getItem(key);
+          if (saved) break;
+        }
+      }
       if (saved) {
         const parsed = JSON.parse(saved);
         if (Array.isArray(parsed.flats) && parsed.flats.length === 28) {
@@ -26,6 +41,11 @@
             selectedFontId: parsed.selectedFontId || 'TechnicNT',
             isBold: typeof parsed.isBold === 'boolean' ? parsed.isBold : true,
             showScale: typeof parsed.showScale === 'boolean' ? parsed.showScale : true,
+            showIds: typeof parsed.showIds === 'boolean' ? parsed.showIds : false,
+            activeTab:
+              parsed.activeTab === 'editor' || parsed.activeTab === 'preview'
+                ? parsed.activeTab
+                : 'split',
           };
         }
       }
@@ -38,17 +58,19 @@
       selectedFontId: 'TechnicNT',
       isBold: true,
       showScale: true,
+      showIds: false,
+      activeTab: 'split',
     };
   }
 
   const initial = loadInitialState();
   let flats: FlatEntry[] = $state(initial.flats);
-  let showIds: boolean = $state(false);
+  let showIds: boolean = $state(initial.showIds);
   let badgeColor: string = $state(initial.badgeColor);
   let selectedFontId: string = $state(initial.selectedFontId);
   let isBold: boolean = $state(initial.isBold);
   let showScale: boolean = $state(initial.showScale);
-  let activeTab: 'split' | 'editor' | 'preview' = $state('split');
+  let activeTab: 'split' | 'editor' | 'preview' = $state(initial.activeTab);
   let isDraggingFile: boolean = $state(false);
 
   const currentFontOption = $derived(
@@ -66,6 +88,8 @@
           selectedFontId,
           isBold,
           showScale,
+          showIds,
+          activeTab,
         })
       );
     } catch {
