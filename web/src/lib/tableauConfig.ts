@@ -1,4 +1,16 @@
-import type { SlotCoordinates, BadgeStyleId, BadgeStyleOption, PrintColumnOption, FlatEntry } from './types';
+import type {
+  SlotCoordinates,
+  BadgeStyleId,
+  BadgeStyleOption,
+  PrintColumnOption,
+  FlatEntry,
+  TableauPresetId,
+  NumberingDirection,
+  PrintLayoutMode,
+  ColumnConfig,
+  TableauLayoutConfig,
+  SlotMapping,
+} from './types';
 
 // A4 Landscape 300 DPI canvas
 export const SVG_VIEWBOX = '0 0 3508 2481';
@@ -8,9 +20,8 @@ export const SVG_HEIGHT = 2481;
 // 1 mm in SVG pixels (3508 / 297 mm = 11.811448)
 export const PX_PER_MM = 3508.0 / 297.0;
 
-// Grid & physical layout constants
+// Tesla frame physical constants (exact 1:1)
 export const COL_ORIGINS_X = [275.151, 1337.200, 2399.240];
-
 export const SCALE_Y = 1.17231;
 export const OFFSET_Y = 210.788;
 export const IMAGE_SLOT_HEIGHT = 130.0;
@@ -30,8 +41,8 @@ export const BADGE_HEIGHT = 54.0;
 export const BADGE_RX = 8.0;
 export const DEFAULT_BADGE_FILL = '#FFE6C7';
 export const BADGE_FONT_SIZE = 38.0;
-export const BADGE_OFFSET_X = 650.0; // Leaves 23px clearance from slot right edge (colX + 703.96)
-export const BADGE_TOP_OFFSET_Y = 0.0; // Vertically centered at slotCenterY
+export const BADGE_OFFSET_X = 650.0;
+export const BADGE_TOP_OFFSET_Y = 0.0;
 
 export const BADGE_STYLES: BadgeStyleOption[] = [
   {
@@ -61,6 +72,206 @@ export const BADGE_STYLES: BadgeStyleOption[] = [
   },
 ];
 
+// --- Tableau Presets ---
+export interface PresetDefinition {
+  id: TableauPresetId;
+  label: string;
+  description: string;
+  columns: ColumnConfig[];
+  numberingDirection: NumberingDirection;
+  startNumber: number;
+  printMode: PrintLayoutMode;
+}
+
+export const TABLEAU_PRESETS: PresetDefinition[] = [
+  {
+    id: 'tesla-guard-28',
+    label: 'Tesla GUARD prima – 28 bytů (10+10+8)',
+    description: '3 sloupce, 3. sloupec má 8 bytů (horní 2 pozice prázdné), číslování zdola nahoru',
+    columns: [
+      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 },
+    ],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'frame-1to1',
+  },
+  {
+    id: 'tesla-guard-10',
+    label: 'Tesla GUARD prima – 10 bytů (1 sloupec)',
+    description: '1 modul TT10 s 10 tlačítky, číslování zdola nahoru',
+    columns: [{ id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'frame-1to1',
+  },
+  {
+    id: 'tesla-guard-20',
+    label: 'Tesla GUARD prima – 20 bytů (2 sloupce)',
+    description: '2 moduly TT10 (10 + 10 tlačítek), číslování zdola nahoru',
+    columns: [
+      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
+    ],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'frame-1to1',
+  },
+  {
+    id: 'tesla-guard-30',
+    label: 'Tesla GUARD prima – 30 bytů (3 sloupce)',
+    description: '3 moduly TT10 (10 + 10 + 10 tlačítek), číslování zdola nahoru',
+    columns: [
+      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 },
+    ],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'frame-1to1',
+  },
+  {
+    id: 'tesla-guard-40',
+    label: 'Tesla GUARD prima – 40 bytů (4 sloupce)',
+    description: '4 moduly TT10 (10 + 10 + 10 + 10 tlačítek), úsporný tisk',
+    columns: [
+      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 4, capacity: 10, skipTop: 0, skipBottom: 0 },
+    ],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'compact-strips',
+  },
+  {
+    id: 'custom',
+    label: 'Vlastní rozložení (Custom)',
+    description: 'Uživatelsky nastavený počet sloupců a kapacit tlačítek',
+    columns: [
+      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
+      { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 },
+    ],
+    numberingDirection: 'bottom-up',
+    startNumber: 1,
+    printMode: 'frame-1to1',
+  },
+];
+
+export function getDefaultLayout(): TableauLayoutConfig {
+  const p = TABLEAU_PRESETS[0];
+  return {
+    preset: p.id,
+    columns: JSON.parse(JSON.stringify(p.columns)),
+    numberingDirection: p.numberingDirection,
+    startNumber: p.startNumber,
+    printMode: p.printMode,
+  };
+}
+
+export function getTotalSlots(layout: TableauLayoutConfig): number {
+  return layout.columns.reduce(
+    (sum, col) => sum + Math.max(0, col.capacity - (col.skipTop || 0) - (col.skipBottom || 0)),
+    0
+  );
+}
+
+export function computeSlotMapping(layout: TableauLayoutConfig): SlotMapping[] {
+  const totalSlots = getTotalSlots(layout);
+  const padLen = totalSlots >= 100 ? 3 : 2;
+  const mappings: SlotMapping[] = [];
+
+  if (layout.numberingDirection === 'row-left-right') {
+    const maxCapacity = Math.max(...layout.columns.map((c) => c.capacity), 10);
+    let num = layout.startNumber;
+    let slotIdx = 1;
+    for (let r = 0; r < maxCapacity; r++) {
+      for (let c = 0; c < layout.columns.length; c++) {
+        const col = layout.columns[c];
+        const skipTop = col.skipTop || 0;
+        const skipBottom = col.skipBottom || 0;
+        if (r >= skipTop && r < col.capacity - skipBottom) {
+          mappings.push({
+            slotIndex: slotIdx++,
+            colIndex: c,
+            rowIndex: r,
+            defaultNumber: String(num++).padStart(padLen, '0'),
+          });
+        }
+      }
+    }
+  } else if (layout.numberingDirection === 'top-down') {
+    let num = layout.startNumber;
+    let slotIdx = 1;
+    for (let c = 0; c < layout.columns.length; c++) {
+      const col = layout.columns[c];
+      const skipTop = col.skipTop || 0;
+      const skipBottom = col.skipBottom || 0;
+      for (let r = skipTop; r < col.capacity - skipBottom; r++) {
+        mappings.push({
+          slotIndex: slotIdx++,
+          colIndex: c,
+          rowIndex: r,
+          defaultNumber: String(num++).padStart(padLen, '0'),
+        });
+      }
+    }
+  } else {
+    // Default: 'bottom-up' (Tesla classic)
+    let num = layout.startNumber;
+    let slotIdx = 1;
+    for (let c = 0; c < layout.columns.length; c++) {
+      const col = layout.columns[c];
+      const skipTop = col.skipTop || 0;
+      const skipBottom = col.skipBottom || 0;
+      for (let r = col.capacity - 1 - skipBottom; r >= skipTop; r--) {
+        mappings.push({
+          slotIndex: slotIdx++,
+          colIndex: c,
+          rowIndex: r,
+          defaultNumber: String(num++).padStart(padLen, '0'),
+        });
+      }
+    }
+  }
+
+  mappings.sort((a, b) => a.slotIndex - b.slotIndex);
+  return mappings;
+}
+
+export function computeColumnOrigins(layout: TableauLayoutConfig): number[] {
+  const numCols = layout.columns.length;
+  const colWidth = 621.0 * 1.17229; // ~728.0 px
+
+  if (layout.printMode === 'compact-strips') {
+    const gap = 60.0;
+    const totalW = numCols * colWidth + (numCols - 1) * gap;
+    const startX = Math.max(60.0, (SVG_WIDTH - totalW) / 2.0);
+    return Array.from({ length: numCols }, (_, i) => startX + i * (colWidth + gap));
+  }
+
+  // 'frame-1to1' mode
+  if (numCols === 1) {
+    return [(SVG_WIDTH - colWidth) / 2.0];
+  }
+  if (numCols === 2) {
+    const gap = 334.0;
+    const totalW = 2 * colWidth + gap;
+    const startX = (SVG_WIDTH - totalW) / 2.0;
+    return [startX, startX + colWidth + gap];
+  }
+  if (numCols === 3) {
+    return [275.151, 1337.200, 2399.240];
+  }
+
+  const gap = 60.0;
+  const totalW = numCols * colWidth + (numCols - 1) * gap;
+  const startX = Math.max(60.0, (SVG_WIDTH - totalW) / 2.0);
+  return Array.from({ length: numCols }, (_, i) => startX + i * (colWidth + gap));
+}
+
 export function getStyleMetrics(
   styleId: BadgeStyleId,
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
@@ -81,15 +292,11 @@ export function getStyleMetrics(
     }
     case 'inline-num': {
       const startX = slotLeft + textPaddingLeft;
-      const rightLimit = slotRight - 75.0; // reserve 75px for number and clearance
+      const rightLimit = slotRight - 75.0;
       const maxWidth = Math.max(250.0, rightLimit - startX);
       return { textLeftPadding: startX, maxTextWidth: maxWidth };
     }
-    case 'watermark': {
-      const startX = slotLeft + textPaddingLeft;
-      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
+    case 'watermark':
     case 'none': {
       const startX = slotLeft + textPaddingLeft;
       const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
@@ -98,7 +305,7 @@ export function getStyleMetrics(
     case 'classic':
     default: {
       const startX = slotLeft + textPaddingLeft;
-      const rightLimit = 604.0; // Reserve space for 62px badge + 23px margin + 15px clearance
+      const rightLimit = 604.0;
       const maxWidth = Math.max(250.0, rightLimit - startX);
       return { textLeftPadding: startX, maxTextWidth: maxWidth };
     }
@@ -165,52 +372,74 @@ export interface TableauAppSettings {
 
 export interface ParsedProjectYAML {
   settings?: Partial<TableauAppSettings>;
+  layout?: Partial<TableauLayoutConfig>;
   flats?: FlatEntry[];
 }
 
 export function serializeProjectYAML(
   settings: TableauAppSettings,
-  flats?: FlatEntry[]
+  flats?: FlatEntry[],
+  layout?: TableauLayoutConfig
 ): string {
+  const activeLayout = layout || getDefaultLayout();
   const lines: string[] = [
     `# ============================================================`,
     `# Zvonkové tablo Tesla / GUARD prima – Konfigurace projektu`,
     `# ============================================================`,
-    `# Tento soubor obsahuje nastavení vzhledu, písma, tiskové parametry`,
-    `# a kompletní seznam jmenovek pro všech 28 bytů.`,
+    `# Tento soubor obsahuje nastavení vzhledu, geometrii tabla`,
+    `# i kompletní seznam jmenovek pro všechny byty.`,
     `# Lze jej kdykoliv znovu načíst do aplikace zvonky-editor.html.`,
     ``,
-    `version: 1`,
+    `version: 2`,
     ``,
-    `# --- Nastavení vzhledu a sazby ---`,
-    `settings:`,
-    `  # Písmo: TechnicNT | DIN | FiraSans | Iosevka | Futura | SystemSans`,
-    `  font: ${settings.font}`,
-    `  # Tučný řez písma (true / false)`,
-    `  bold: ${settings.bold}`,
-    `  # Zobrazit čísla bytů na štítcích (true / false)`,
-    `  showIds: ${settings.showIds}`,
-    `  # Typografický styl čísla: classic | left-block | inline-num | watermark | none`,
-    `  badgeStyle: ${settings.badgeStyle}`,
-    `  # Barva podkladu čísla (např. "#FFE6C7" broskvová, "#DBEAFE" modrá)`,
-    `  badgeColor: "${settings.badgeColor}"`,
-    `  # Odsazení textu od levého okraje v bodech (59.0 = 5mm, 88.5 = 7.5mm, 118.0 = 10mm)`,
-    `  textPaddingLeft: ${settings.textPaddingLeft}`,
-    `  # Rohové ořezové značky pro pravítko / řezačku (true / false)`,
-    `  showCropMarks: ${settings.showCropMarks}`,
-    `  # Tiskové kalibrační pravítko 100mm v dolním okraji (true / false)`,
-    `  showScale: ${settings.showScale}`,
-    `  # Rozsah tisku: all = všechny sloupce, 1 = sloupec 1, 2 = sloupec 2, 3 = sloupec 3`,
-    `  printColumn: ${settings.printColumn ?? 'all'}`,
+    `# --- Typ a geometrie tabla ---`,
+    `layout:`,
+    `  preset: ${activeLayout.preset}`,
+    `  numberingDirection: ${activeLayout.numberingDirection}`,
+    `  startNumber: ${activeLayout.startNumber}`,
+    `  printMode: ${activeLayout.printMode}`,
+    `  columns:`,
   ];
+
+  for (const col of activeLayout.columns) {
+    lines.push(`    - id: ${col.id}`);
+    lines.push(`      capacity: ${col.capacity}`);
+    lines.push(`      skipTop: ${col.skipTop || 0}`);
+    lines.push(`      skipBottom: ${col.skipBottom || 0}`);
+  }
+
+  lines.push(``);
+  lines.push(`# --- Nastavení vzhledu a sazby ---`);
+  lines.push(`settings:`);
+  lines.push(`  # Písmo: TechnicNT | DIN | FiraSans | Iosevka | Futura | SystemSans`);
+  lines.push(`  font: ${settings.font}`);
+  lines.push(`  # Tučný řez písma (true / false)`);
+  lines.push(`  bold: ${settings.bold}`);
+  lines.push(`  # Zobrazit čísla bytů na štítcích (true / false)`);
+  lines.push(`  showIds: ${settings.showIds}`);
+  lines.push(`  # Typografický styl čísla: classic | left-block | inline-num | watermark | none`);
+  lines.push(`  badgeStyle: ${settings.badgeStyle}`);
+  lines.push(`  # Barva podkladu čísla (např. "#FFE6C7" broskvová, "#DBEAFE" modrá)`);
+  lines.push(`  badgeColor: "${settings.badgeColor}"`);
+  lines.push(`  # Odsazení textu od levého okraje v bodech (59.0 = 5mm, 88.5 = 7.5mm, 118.0 = 10mm)`);
+  lines.push(`  textPaddingLeft: ${settings.textPaddingLeft}`);
+  lines.push(`  # Rohové ořezové značky pro pravítko / řezačku (true / false)`);
+  lines.push(`  showCropMarks: ${settings.showCropMarks}`);
+  lines.push(`  # Tiskové kalibrační pravítko 100mm v dolním okraji (true / false)`);
+  lines.push(`  showScale: ${settings.showScale}`);
+  lines.push(`  # Rozsah tisku: all = všechny sloupce, 1 = sloupec 1, 2 = sloupec 2...`);
+  lines.push(`  printColumn: ${settings.printColumn ?? 'all'}`);
 
   if (flats && flats.length > 0) {
     lines.push(``);
-    lines.push(`# --- Seznam jmenovek pro byty 01 až 28 ---`);
+    lines.push(`# --- Seznam jmenovek pro byty ---`);
     lines.push(`apartments:`);
     for (const flat of flats) {
       const idStr = String(flat.id).padStart(2, '0');
       lines.push(`  - id: "${idStr}"`);
+      if (flat.customNumber) {
+        lines.push(`    customNumber: ${JSON.stringify(flat.customNumber)}`);
+      }
       lines.push(`    name1: ${JSON.stringify(flat.name1 || '')}`);
       lines.push(`    name2: ${JSON.stringify(flat.name2 || '')}`);
     }
@@ -251,31 +480,80 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
             n1 = parts[0] || '';
             n2 = parts.slice(1).join(' / ');
           }
-          return { id: fid, name1: n1, name2: n2 };
+          return {
+            id: fid,
+            customNumber: item.customNumber ? String(item.customNumber) : undefined,
+            name1: n1,
+            name2: n2,
+          };
         });
       }
 
-      return { settings: settingsPart, flats: flatsPart };
+      return {
+        settings: settingsPart,
+        layout: parsed.layout,
+        flats: flatsPart,
+      };
     }
 
     // YAML line-based parsing
     const lines = trimmed.split(/\r?\n/);
     const settings: Record<string, any> = {};
+    const layout: Record<string, any> = { columns: [] };
     const flats: FlatEntry[] = [];
     let currentFlat: Partial<FlatEntry> | null = null;
-    let section: 'root' | 'settings' | 'apartments' = 'root';
+    let currentCol: Partial<ColumnConfig> | null = null;
+    let section: 'root' | 'settings' | 'layout' | 'columns' | 'apartments' = 'root';
 
     for (const rawLine of lines) {
       const clean = rawLine.replace(/#.*$/, '').trimEnd();
       const trimmedLine = clean.trim();
       if (!trimmedLine) continue;
 
+      if (trimmedLine === 'layout:') {
+        section = 'layout';
+        continue;
+      }
+      if (trimmedLine === 'columns:') {
+        section = 'columns';
+        continue;
+      }
       if (trimmedLine === 'settings:') {
+        if (currentCol && currentCol.id) {
+          layout.columns.push(currentCol);
+          currentCol = null;
+        }
         section = 'settings';
         continue;
       }
       if (trimmedLine === 'apartments:') {
+        if (currentCol && currentCol.id) {
+          layout.columns.push(currentCol);
+          currentCol = null;
+        }
         section = 'apartments';
+        continue;
+      }
+
+      if (section === 'columns') {
+        if (trimmedLine.startsWith('- id:')) {
+          if (currentCol && currentCol.id) {
+            layout.columns.push(currentCol);
+          }
+          const idVal = trimmedLine.replace(/^- id:\s*/, '').replace(/["']/g, '').trim();
+          currentCol = { id: parseInt(idVal, 10) || layout.columns.length + 1, capacity: 10, skipTop: 0, skipBottom: 0 };
+          continue;
+        }
+        if (currentCol) {
+          const colonIdx = trimmedLine.indexOf(':');
+          if (colonIdx !== -1) {
+            const key = trimmedLine.slice(0, colonIdx).trim();
+            const val = parseInt(trimmedLine.slice(colonIdx + 1).trim(), 10) || 0;
+            if (key === 'capacity') currentCol.capacity = val;
+            else if (key === 'skipTop') currentCol.skipTop = val;
+            else if (key === 'skipBottom') currentCol.skipBottom = val;
+          }
+        }
         continue;
       }
 
@@ -284,6 +562,7 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
           if (currentFlat && currentFlat.id) {
             flats.push({
               id: currentFlat.id,
+              customNumber: currentFlat.customNumber,
               name1: currentFlat.name1 || '',
               name2: currentFlat.name2 || '',
             });
@@ -307,6 +586,7 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
             }
             if (key === 'name1') currentFlat.name1 = val;
             else if (key === 'name2') currentFlat.name2 = val;
+            else if (key === 'customNumber') currentFlat.customNumber = val;
             else if (key === 'name') {
               if (val.includes('/') || val.includes(';')) {
                 const parts = val.split(/[/;]/).map((s) => s.trim());
@@ -317,6 +597,17 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
               }
             }
           }
+        }
+        continue;
+      }
+
+      if (section === 'layout') {
+        const colonIdx = trimmedLine.indexOf(':');
+        if (colonIdx !== -1) {
+          const key = trimmedLine.slice(0, colonIdx).trim();
+          let val = trimmedLine.slice(colonIdx + 1).trim().replace(/["']/g, '');
+          if (key === 'startNumber') layout[key] = parseInt(val, 10) || 1;
+          else layout[key] = val;
         }
         continue;
       }
@@ -336,25 +627,29 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
         if (val === 'true') settings[key] = true;
         else if (val === 'false') settings[key] = false;
         else if (key === 'printColumn') {
-          if (val === '1') settings[key] = 1;
-          else if (val === '2') settings[key] = 2;
-          else if (val === '3') settings[key] = 3;
+          if (val === 'all') settings[key] = 'all';
+          else if (!isNaN(Number(val)) && val !== '') settings[key] = Number(val);
           else settings[key] = 'all';
         } else if (!isNaN(Number(val)) && val !== '') settings[key] = Number(val);
         else settings[key] = val;
       }
     }
 
+    if (currentCol && currentCol.id) {
+      layout.columns.push(currentCol);
+    }
     if (currentFlat && currentFlat.id) {
       flats.push({
         id: currentFlat.id,
+        customNumber: currentFlat.customNumber,
         name1: currentFlat.name1 || '',
         name2: currentFlat.name2 || '',
       });
     }
 
     return {
-      settings: settings as Partial<TableauAppSettings>,
+      settings: Object.keys(settings).length > 0 ? (settings as Partial<TableauAppSettings>) : undefined,
+      layout: layout.columns.length > 0 || layout.preset ? (layout as Partial<TableauLayoutConfig>) : undefined,
       flats: flats.length > 0 ? flats : undefined,
     };
   } catch {
@@ -371,7 +666,15 @@ export function parseSettingsYAML(text: string): Partial<TableauAppSettings> | n
   return parsed ? parsed.settings || null : null;
 }
 
-export function flatIdToSlot(flatId: number): { col: number; row: number } {
+export function flatIdToSlot(
+  flatId: number,
+  layout?: TableauLayoutConfig
+): { col: number; row: number } {
+  if (layout) {
+    const mappings = computeSlotMapping(layout);
+    const m = mappings.find((item) => item.slotIndex === flatId);
+    if (m) return { col: m.colIndex, row: m.rowIndex };
+  }
   const col = Math.floor((flatId - 1) / 10);
   const row = (col + 1) * 10 - flatId;
   return { col, row };
@@ -389,7 +692,6 @@ export function getWatermarkStyle(badgeColor: string): { fill: string; opacity: 
     b = parseInt(hex.substring(4, 6), 16);
   }
   const lum = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
-  // Pastel colors need higher opacity (0.70-0.85) to show on white paper; dark colors need 0.25-0.35
   const opacity = Math.min(0.85, Math.max(0.25, Math.round((0.20 + lum * 0.65) * 100) / 100));
   return { fill: badgeColor, opacity };
 }
@@ -398,12 +700,13 @@ export function getSlotCoordinates(
   col: number,
   row: number,
   styleId: BadgeStyleId = 'classic',
-  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
+  colOrigins: number[] = COL_ORIGINS_X
 ): SlotCoordinates {
   const slotTop = (IMAGE_SLOT_TOP_0 + row * IMAGE_SLOT_STEP) * SCALE_Y + OFFSET_Y;
   const slotBottom = slotTop + IMAGE_SLOT_HEIGHT * SCALE_Y;
   const slotCenterY = (slotTop + slotBottom) / 2.0;
-  const colX = COL_ORIGINS_X[col];
+  const colX = colOrigins[col] !== undefined ? colOrigins[col] : (COL_ORIGINS_X[col] || 275.151);
   const { textLeftPadding } = getStyleMetrics(styleId, textPaddingLeft);
   const textX = colX + textLeftPadding;
 
@@ -451,57 +754,56 @@ export function calculateFontSize(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidthOrStyle: number | BadgeStyleId = 'classic',
+  styleId: BadgeStyleId = 'classic',
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): number {
-  const maxWidth =
-    typeof maxWidthOrStyle === 'number'
-      ? maxWidthOrStyle
-      : getStyleMetrics(maxWidthOrStyle, textPaddingLeft).maxTextWidth;
+  const isTwoLines = names.length > 1;
+  const defaultSize = isTwoLines ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
+  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft);
 
-  const isDouble = names.length > 1;
-  const baseFs = isDouble ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
-
-  if (names.length === 0 || names.every((n) => n.length === 0)) {
-    return baseFs;
+  let longestName = '';
+  for (const n of names) {
+    if (n.length > longestName.length) {
+      longestName = n;
+    }
   }
 
-  let fs = baseFs;
-  for (let i = 0; i < 5; i++) {
-    const widths = names.map((n) => measureTextWidth(n, fs, fontOption, isBold));
-    const maxW = Math.max(...widths, 0);
-    if (maxW <= maxWidth) break;
+  if (!longestName) return defaultSize;
 
-    const scale = maxWidth / maxW;
-    fs = Math.max(MIN_FONT_SIZE, fs * scale);
+  const currentWidth = measureTextWidth(longestName, defaultSize, fontOption, isBold);
+  if (currentWidth <= maxTextWidth) {
+    return defaultSize;
   }
 
-  return Math.max(MIN_FONT_SIZE, Math.min(baseFs, fs));
+  const scaled = defaultSize * (maxTextWidth / currentWidth);
+  return Math.max(MIN_FONT_SIZE, Math.round(scaled * 10) / 10);
 }
 
 export function checkFitStatus(
   names: string[],
   fontOption: FontOption,
   isBold = true,
-  maxWidthOrStyle: number | BadgeStyleId = 'classic',
+  styleId: BadgeStyleId = 'classic',
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
 ): 'ok' | 'tight' | 'overflow' {
-  const validNames = names.map((n) => n.trim()).filter((n) => n.length > 0);
-  if (validNames.length === 0) return 'ok';
+  const filtered = names.filter((n) => n.trim().length > 0);
+  if (filtered.length === 0) return 'ok';
 
-  const maxWidth =
-    typeof maxWidthOrStyle === 'number'
-      ? maxWidthOrStyle
-      : getStyleMetrics(maxWidthOrStyle, textPaddingLeft).maxTextWidth;
+  const isTwoLines = filtered.length > 1;
+  const defaultSize = isTwoLines ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
+  const fs = calculateFontSize(filtered, fontOption, isBold, styleId, textPaddingLeft);
 
-  const fs = calculateFontSize(validNames, fontOption, isBold, maxWidth);
-  const widths = validNames.map((n) => measureTextWidth(n, fs, fontOption, isBold));
-  const maxW = Math.max(...widths, 0);
+  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft);
+  let maxW = 0;
+  for (const n of filtered) {
+    const w = measureTextWidth(n, fs, fontOption, isBold);
+    if (w > maxW) maxW = w;
+  }
 
-  if (fs <= MIN_FONT_SIZE && maxW > maxWidth + 2) {
+  if (maxW > maxTextWidth + 1.0) {
     return 'overflow';
   }
-  if (fs < WARNING_FONT_SIZE_THRESHOLD) {
+  if (fs < defaultSize - 2.0) {
     return 'tight';
   }
   return 'ok';

@@ -1,10 +1,9 @@
-import type { FlatEntry, BadgeStyleId, PrintColumnOption } from './types';
+import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from './types';
 import {
   COL_ORIGINS_X,
   SVG_VIEWBOX,
   SVG_WIDTH,
   PX_PER_MM,
-  flatIdToSlot,
   getSlotCoordinates,
   calculateFontSize,
   FONT_OPTIONS,
@@ -16,6 +15,9 @@ import {
   BADGE_FONT_SIZE,
   DEFAULT_TEXT_PADDING_LEFT,
   getWatermarkStyle,
+  getDefaultLayout,
+  computeSlotMapping,
+  computeColumnOrigins,
 } from './tableauConfig';
 import {
   IOSEVKA_SEMIBOLD_WOFF,
@@ -46,31 +48,38 @@ export function generateFullSVG(
   badgeStyle: BadgeStyleId = 'classic',
   showCropMarks = true,
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
-  printColumn: PrintColumnOption = 'all'
+  printColumn: PrintColumnOption = 'all',
+  layout?: TableauLayoutConfig
 ): string {
+  const activeLayout = layout || getDefaultLayout();
+  const colOrigins = computeColumnOrigins(activeLayout);
+  const mappings = computeSlotMapping(activeLayout);
+
   let cardsXml = '';
   let badgesXml = '';
 
   const fontWeight = isBold ? (fontOption.id === 'Iosevka' ? 600 : 700) : 400;
 
-  for (let fid = 1; fid <= 28; fid++) {
-    const { col, row } = flatIdToSlot(fid);
+  for (const slot of mappings) {
+    const col = slot.colIndex;
+    const row = slot.rowIndex;
+
     if (printColumn !== 'all' && col + 1 !== printColumn) {
       continue;
     }
 
-    const entry = flats.find((f) => f.id === fid) || { id: fid, name1: '', name2: '' };
+    const entry = flats.find((f) => f.id === slot.slotIndex) || { id: slot.slotIndex, name1: '', name2: '' };
     const names = [entry.name1.trim(), entry.name2.trim()].filter((n) => n.length > 0);
-    const displayNames = names.length > 0 ? names : [`Byt ${fid}`];
+    const idStr = entry.customNumber || slot.defaultNumber;
+    const displayNames = names.length > 0 ? names : [`Byt ${idStr}`];
 
-    const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
+    const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft, colOrigins);
     const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
-    // Letter-spacing for technical fonts to improve readability
     const letterSpacing = fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal';
 
     // Names card
-    cardsXml += `        <g id="card-flat-${String(fid).padStart(2, '0')}">\n`;
+    cardsXml += `        <g id="card-flat-${String(slot.slotIndex).padStart(2, '0')}">\n`;
     if (displayNames.length === 1) {
       const baselineY = coords.slotCenterY + 0.38 * fs;
       cardsXml += `            <text x="${coords.textX.toFixed(2)}px" y="${baselineY.toFixed(2)}px" style="font-family:${fontOption.fontFamily};font-weight:${fontWeight};font-size:${fs.toFixed(3)}px;letter-spacing:${letterSpacing};fill:#000000;">${escapeXml(displayNames[0])}</text>\n`;
@@ -84,7 +93,6 @@ export function generateFullSVG(
     cardsXml += `        </g>\n`;
 
     // Render badge according to badgeStyle
-    const idStr = String(fid).padStart(2, '0');
     if (badgeStyle === 'left-block') {
       const blockX = coords.colX + 129.54;
       const blockY = coords.slotTop;
@@ -128,28 +136,35 @@ export function generateFullSVG(
   const idsVisible = showIds && badgeStyle !== 'none';
   const idsStyle = idsVisible ? '' : ' style="display:none;"';
 
-  // Vector 10-slot column template
-  let templateSlots = '';
+  // Vector column template (10-slots and 5-slots)
+  let templateSlots10 = '';
   for (let i = 0; i < 10; i++) {
     const y = 15.5 + i * 160.0;
-    templateSlots += `        <rect x="110.5" y="${y.toFixed(1)}" width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5"/>\n`;
+    templateSlots10 += `        <rect x="110.5" y="${y.toFixed(1)}" width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5"/>\n`;
+  }
+  let templateSlots5 = '';
+  for (let i = 0; i < 5; i++) {
+    const y = 15.5 + i * 160.0;
+    templateSlots5 += `        <rect x="110.5" y="${y.toFixed(1)}" width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5"/>\n`;
   }
 
   // Corner crop marks for precise cutting
   let cropMarksXml = '';
   if (showCropMarks) {
     const colW = 621.0 * 1.17229;
-    const colH = 1611.0 * 1.17231;
     const topY = 210.788;
-    const botY = topY + colH;
     const markLen = 22.0;
     const markGap = 5.0;
 
     let marks = '';
-    for (let cIdx = 0; cIdx < COL_ORIGINS_X.length; cIdx++) {
+    for (let cIdx = 0; cIdx < activeLayout.columns.length; cIdx++) {
       if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
-      const colX = COL_ORIGINS_X[cIdx];
+      const colCfg = activeLayout.columns[cIdx];
+      const colH = (colCfg.capacity === 5 ? 811.0 : 1611.0) * 1.17231;
+      const botY = topY + colH;
+      const colX = colOrigins[cIdx];
       const rightX = colX + colW;
+
       // Top-left
       marks += `        <line x1="${colX.toFixed(2)}" y1="${(topY - markGap - markLen).toFixed(2)}" x2="${colX.toFixed(2)}" y2="${(topY - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
       marks += `        <line x1="${(colX - markGap - markLen).toFixed(2)}" y1="${topY.toFixed(2)}" x2="${(colX - markGap).toFixed(2)}" y2="${topY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
@@ -165,6 +180,15 @@ export function generateFullSVG(
     }
 
     cropMarksXml = `    <g id="Ořezové-značky">\n${marks}    </g>\n`;
+  }
+
+  // Column templates XML
+  let colTemplatesXml = '';
+  for (let cIdx = 0; cIdx < activeLayout.columns.length; cIdx++) {
+    if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
+    const colCfg = activeLayout.columns[cIdx];
+    const templateId = colCfg.capacity === 5 ? '#_ColumnTemplate5' : '#_ColumnTemplate10';
+    colTemplatesXml += `    <!-- Vector Column ${cIdx + 1} -->\n    <g transform="matrix(1.17229,0,0,1.17231,${colOrigins[cIdx].toFixed(3)},210.788)">\n        <use xlink:href="${templateId}"/>\n    </g>\n`;
   }
 
   // 100 mm printable calibration scale
@@ -251,25 +275,16 @@ ${ticks}        <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 36}" text-
         ${styleTagOpen}
 ${fontFaces}
         ${styleTagClose}
-        <!-- Pure vector column strip template -->
-        <g id="_ColumnTemplate">
+        <!-- 10-slot Column Template -->
+        <g id="_ColumnTemplate10">
             <rect x="0.5" y="0.5" width="621" height="1611" fill="none" stroke="#000000" stroke-width="1.5"/>
-${templateSlots}        </g>
+${templateSlots10}        </g>
+        <!-- 5-slot Column Template -->
+        <g id="_ColumnTemplate5">
+            <rect x="0.5" y="0.5" width="621" height="811" fill="none" stroke="#000000" stroke-width="1.5"/>
+${templateSlots5}        </g>
     </defs>
-    <!-- Vector Column Templates -->
-    ${(printColumn === 'all' || printColumn === 1) ? `<!-- Column 1 -->
-    <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[0]},210.788)">
-        <use xlink:href="#_ColumnTemplate"/>
-    </g>` : ''}
-    ${(printColumn === 'all' || printColumn === 2) ? `<!-- Column 2 -->
-    <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[1]},210.788)">
-        <use xlink:href="#_ColumnTemplate"/>
-    </g>` : ''}
-    ${(printColumn === 'all' || printColumn === 3) ? `<!-- Column 3 -->
-    <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[2]},210.788)">
-        <use xlink:href="#_ColumnTemplate"/>
-    </g>` : ''}
-    <g id="Příjmení">
+${colTemplatesXml}    <g id="Příjmení">
 ${cardsXml}    </g>
     <g id="Čísla-bytů" serif:id="Čísla bytů"${idsStyle}>
 ${badgesXml}    </g>

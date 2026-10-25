@@ -1,12 +1,10 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from '../lib/types';
   import {
-    COL_ORIGINS_X,
     SVG_VIEWBOX,
     SVG_WIDTH,
     PX_PER_MM,
-    flatIdToSlot,
     getSlotCoordinates,
     calculateFontSize,
     type FontOption,
@@ -16,16 +14,10 @@
     BADGE_FONT_SIZE,
     DEFAULT_TEXT_PADDING_LEFT,
     getWatermarkStyle,
+    getDefaultLayout,
+    computeSlotMapping,
+    computeColumnOrigins,
   } from '../lib/tableauConfig';
-  import {
-    IOSEVKA_SEMIBOLD_WOFF,
-    IOSEVKA_BOLD_WOFF,
-    DIN_REGULAR_WOFF,
-    DIN_BOLD_WOFF,
-    FIRA_REGULAR_WOFF,
-    FIRA_BOLD_WOFF,
-    TECHNIC_NT_WOFF,
-  } from '../assets/embeddedAssets';
 
   let {
     flats,
@@ -38,6 +30,7 @@
     showCropMarks = true,
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
     printColumn = 'all',
+    layout = getDefaultLayout(),
   }: {
     flats: FlatEntry[];
     showIds: boolean;
@@ -49,6 +42,7 @@
     showCropMarks?: boolean;
     textPaddingLeft?: number;
     printColumn?: PrintColumnOption;
+    layout?: TableauLayoutConfig;
   } = $props();
 
   const fontWeight = $derived(
@@ -58,6 +52,9 @@
   const letterSpacing = $derived(
     fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal'
   );
+
+  const colOrigins = $derived(computeColumnOrigins(layout));
+  const mappings = $derived(computeSlotMapping(layout));
 
   interface RenderCard {
     id: number;
@@ -87,159 +84,162 @@
   }
 
   const cards = $derived(
-    flats
-      .filter((entry) => printColumn === 'all' || flatIdToSlot(entry.id).col + 1 === printColumn)
-      .map((entry) => {
-      const names = [entry.name1.trim(), entry.name2.trim()].filter((n) => n.length > 0);
-      const displayNames = names.length > 0 ? names : [`Byt ${entry.id}`];
+    mappings
+      .filter((slot) => printColumn === 'all' || slot.colIndex + 1 === printColumn)
+      .map((slot) => {
+        const entry = flats.find((f) => f.id === slot.slotIndex) || { id: slot.slotIndex, name1: '', name2: '' };
+        const names = [entry.name1.trim(), entry.name2.trim()].filter((n) => n.length > 0);
+        const idStr = entry.customNumber || slot.defaultNumber;
+        const displayNames = names.length > 0 ? names : [`Byt ${idStr}`];
 
-      const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
-      const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
+        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins);
+        const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
-      const lines: { text: string; y: number }[] = [];
-      if (displayNames.length === 1) {
-        lines.push({
-          text: displayNames[0],
-          y: coords.slotCenterY + 0.38 * fs,
-        });
-      } else {
-        const lineHeight = fs * 1.18;
-        lines.push({
-          text: displayNames[0],
-          y: coords.slotCenterY - 0.5 * lineHeight + 0.38 * fs,
-        });
-        lines.push({
-          text: displayNames[1],
-          y: coords.slotCenterY + 0.5 * lineHeight + 0.38 * fs,
-        });
-      }
+        const lines: { text: string; y: number }[] = [];
+        if (displayNames.length === 1) {
+          lines.push({
+            text: displayNames[0],
+            y: coords.slotCenterY + 0.38 * fs,
+          });
+        } else {
+          const lineHeight = fs * 1.18;
+          lines.push({
+            text: displayNames[0],
+            y: coords.slotCenterY - 0.5 * lineHeight + 0.38 * fs,
+          });
+          lines.push({
+            text: displayNames[1],
+            y: coords.slotCenterY + 0.5 * lineHeight + 0.38 * fs,
+          });
+        }
 
-      return {
-        id: entry.id,
-        names: displayNames,
-        fs,
-        textX: coords.textX,
-        lines,
-      } as RenderCard;
-    })
+        return {
+          id: slot.slotIndex,
+          names: displayNames,
+          fs,
+          textX: coords.textX,
+          lines,
+        } as RenderCard;
+      })
   );
 
   const badges = $derived(
-    flats
-      .filter((entry) => printColumn === 'all' || flatIdToSlot(entry.id).col + 1 === printColumn)
-      .map((entry) => {
-      const { col, row } = flatIdToSlot(entry.id);
-      const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
-      const idStr = String(entry.id).padStart(2, '0');
+    mappings
+      .filter((slot) => printColumn === 'all' || slot.colIndex + 1 === printColumn)
+      .map((slot) => {
+        const entry = flats.find((f) => f.id === slot.slotIndex) || { id: slot.slotIndex, name1: '', name2: '' };
+        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins);
+        const idStr = entry.customNumber || slot.defaultNumber;
 
-      if (badgeStyle === 'left-block') {
-        const blockX = coords.colX + 129.54;
-        const blockY = coords.slotTop;
-        const blockW = 76.0;
-        const blockH = coords.slotBottom - coords.slotTop;
+        if (badgeStyle === 'left-block') {
+          const blockX = coords.colX + 129.54;
+          const blockY = coords.slotTop;
+          const blockW = 76.0;
+          const blockH = coords.slotBottom - coords.slotTop;
+          return {
+            id: slot.slotIndex,
+            idStr,
+            rectX: blockX,
+            rectY: blockY,
+            rectW: blockW,
+            rectH: blockH,
+            rx: 0,
+            cx: blockX + blockW / 2.0,
+            textY: coords.slotCenterY + 14.0,
+            fontSize: 42,
+            showDivider: true,
+            dividerX: blockX + blockW,
+            dividerY1: blockY,
+            dividerY2: coords.slotBottom,
+            opacity: 1,
+            color: badgeColor,
+          } as RenderBadge;
+        }
+
+        if (badgeStyle === 'inline-num') {
+          return {
+            id: slot.slotIndex,
+            idStr,
+            rectX: 0,
+            rectY: 0,
+            rectW: 0,
+            rectH: 0,
+            rx: 0,
+            cx: coords.colX + 665.0,
+            textY: coords.slotCenterY + 13.0,
+            fontSize: 36,
+            showDivider: false,
+            dividerX: 0,
+            dividerY1: 0,
+            dividerY2: 0,
+            opacity: 1,
+            color: '#000000',
+          } as RenderBadge;
+        }
+
+        if (badgeStyle === 'watermark') {
+          const wm = getWatermarkStyle(badgeColor);
+          return {
+            id: slot.slotIndex,
+            idStr,
+            rectX: 0,
+            rectY: 0,
+            rectW: 0,
+            rectH: 0,
+            rx: 0,
+            cx: coords.colX + 636.0,
+            textY: coords.slotCenterY + 28.0,
+            fontSize: 84,
+            showDivider: false,
+            dividerX: 0,
+            dividerY1: 0,
+            dividerY2: 0,
+            opacity: wm.opacity,
+            color: wm.fill,
+          } as RenderBadge;
+        }
+
+        // Default: 'classic' badge
+        const cx = coords.badgeCx;
+        const cy = coords.badgeCy;
         return {
-          id: entry.id,
+          id: slot.slotIndex,
           idStr,
-          rectX: blockX,
-          rectY: blockY,
-          rectW: blockW,
-          rectH: blockH,
-          rx: 0,
-          cx: blockX + blockW / 2.0,
-          textY: coords.slotCenterY + 14.0,
-          fontSize: 42,
-          showDivider: true,
-          dividerX: blockX + blockW,
-          dividerY1: coords.slotTop,
-          dividerY2: coords.slotBottom,
+          rectX: cx - BADGE_WIDTH / 2.0,
+          rectY: cy - BADGE_HEIGHT / 2.0,
+          rectW: BADGE_WIDTH,
+          rectH: BADGE_HEIGHT,
+          rx: BADGE_RX,
+          cx,
+          textY: cy + 13.0,
+          fontSize: BADGE_FONT_SIZE,
+          showDivider: false,
+          dividerX: 0,
+          dividerY1: 0,
+          dividerY2: 0,
           opacity: 1,
           color: badgeColor,
         } as RenderBadge;
-      }
-
-      if (badgeStyle === 'inline-num') {
-        return {
-          id: entry.id,
-          idStr,
-          rectX: 0,
-          rectY: 0,
-          rectW: 0,
-          rectH: 0,
-          rx: 0,
-          cx: coords.colX + 665.0,
-          textY: coords.slotCenterY + 13.0,
-          fontSize: 36,
-          showDivider: false,
-          dividerX: 0,
-          dividerY1: 0,
-          dividerY2: 0,
-          opacity: 1,
-          color: '#000000',
-        } as RenderBadge;
-      }
-
-      if (badgeStyle === 'watermark') {
-        const wm = getWatermarkStyle(badgeColor);
-        return {
-          id: entry.id,
-          idStr,
-          rectX: 0,
-          rectY: 0,
-          rectW: 0,
-          rectH: 0,
-          rx: 0,
-          cx: coords.colX + 636.0,
-          textY: coords.slotCenterY + 28.0,
-          fontSize: 84,
-          showDivider: false,
-          dividerX: 0,
-          dividerY1: 0,
-          dividerY2: 0,
-          opacity: wm.opacity,
-          color: wm.fill,
-        } as RenderBadge;
-      }
-
-      // Classic badge
-      const cx = coords.badgeCx;
-      const cy = coords.badgeCy;
-      return {
-        id: entry.id,
-        idStr,
-        rectX: cx - BADGE_WIDTH / 2.0,
-        rectY: cy - BADGE_HEIGHT / 2.0,
-        rectW: BADGE_WIDTH,
-        rectH: BADGE_HEIGHT,
-        rx: BADGE_RX,
-        cx,
-        textY: cy + 13.0,
-        fontSize: BADGE_FONT_SIZE,
-        showDivider: false,
-        dividerX: 0,
-        dividerY1: 0,
-        dividerY2: 0,
-        opacity: 1,
-        color: badgeColor,
-      } as RenderBadge;
-    })
+      })
   );
 
-  // Corner crop marks for trimming
-  const cropMarks = $derived.by(() => {
+  // Corner crop marks for columns
+  const colCropMarks = $derived.by(() => {
     if (!showCropMarks) return [];
     const colW = 621.0 * 1.17229;
-    const colH = 1611.0 * 1.17231;
     const topY = 210.788;
-    const botY = topY + colH;
     const markLen = 22.0;
     const markGap = 5.0;
 
     const list: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    for (let cIdx = 0; cIdx < COL_ORIGINS_X.length; cIdx++) {
+    for (let cIdx = 0; cIdx < layout.columns.length; cIdx++) {
       if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
-      const colX = COL_ORIGINS_X[cIdx];
+      const colCfg = layout.columns[cIdx];
+      const colH = (colCfg.capacity === 5 ? 811.0 : 1611.0) * 1.17231;
+      const botY = topY + colH;
+      const colX = colOrigins[cIdx];
       const rightX = colX + colW;
+
       // Top-left
       list.push({ x1: colX, y1: topY - markGap - markLen, x2: colX, y2: topY - markGap });
       list.push({ x1: colX - markGap - markLen, y1: topY, x2: colX - markGap, y2: topY });
@@ -277,11 +277,12 @@
     };
   });
 
-  const templateSlotYs = Array.from({ length: 10 }, (_, i) => 15.5 + i * 160.0);
+  const templateSlotYs10 = Array.from({ length: 10 }, (_, i) => 15.5 + i * 160.0);
+  const templateSlotYs5 = Array.from({ length: 5 }, (_, i) => 15.5 + i * 160.0);
 
   // --- Zoom & Viewport Controls ---
-  let zoomLevel: number = $state(1.0); // 1.0 = fit full page
-  let activeFocus: 'all' | 'col1' | 'col2' | 'col3' = $state('all');
+  let zoomLevel: number = $state(1.0);
+  let activeFocus: string = $state('all');
   let viewportEl: HTMLDivElement | null = $state(null);
 
   function resetZoom() {
@@ -302,14 +303,13 @@
     zoomLevel = Math.max(0.5, Math.round((zoomLevel - 0.25) * 100) / 100);
   }
 
-  async function focusColumn(colKey: 'all' | 'col1' | 'col2' | 'col3') {
+  async function focusColumn(colKey: string, cIdx?: number) {
     activeFocus = colKey;
-    if (colKey === 'all') {
+    if (colKey === 'all' || cIdx === undefined) {
       resetZoom();
       return;
     }
 
-    // Zoom into column view (260% scale)
     zoomLevel = 2.6;
     await tick();
 
@@ -318,13 +318,8 @@
       const scrollW = viewportEl.scrollWidth;
       const viewW = viewportEl.clientWidth;
 
-      // Horizontal centers relative to total 3508px width:
-      // Col 1 center = 639.5 / 3508 = 0.1823
-      // Col 2 center = 1701.5 / 3508 = 0.4850
-      // Col 3 center = 2763.5 / 3508 = 0.7878
-      let targetRatio = 0.1823;
-      if (colKey === 'col2') targetRatio = 0.485;
-      if (colKey === 'col3') targetRatio = 0.7878;
+      const colCenterX = colOrigins[cIdx] + (621.0 * 1.17229) / 2.0;
+      const targetRatio = colCenterX / 3508.0;
 
       const targetX = targetRatio * scrollW - viewW / 2;
       viewportEl.scrollTo({
@@ -356,34 +351,20 @@
         class="focus-btn"
         class:active={activeFocus === 'all' && zoomLevel === 1.0}
         onclick={() => focusColumn('all')}
-        title="Zobrazit celé tablo na výšku stránky"
+        title="Celý náhled tabla (A4)"
       >
-        Celé tablo
+        Vše
       </button>
-      <button
-        class="focus-btn"
-        class:active={activeFocus === 'col1'}
-        onclick={() => focusColumn('col1')}
-        title="Detailní pohled na Sloupec 1 (Byty 10–01)"
-      >
-        Sloupec 1
-      </button>
-      <button
-        class="focus-btn"
-        class:active={activeFocus === 'col2'}
-        onclick={() => focusColumn('col2')}
-        title="Detailní pohled na Sloupec 2 (Byty 20–11)"
-      >
-        Sloupec 2
-      </button>
-      <button
-        class="focus-btn"
-        class:active={activeFocus === 'col3'}
-        onclick={() => focusColumn('col3')}
-        title="Detailní pohled na Sloupec 3 (Byty 28–21)"
-      >
-        Sloupec 3
-      </button>
+      {#each layout.columns as _, cIdx}
+        <button
+          class="focus-btn"
+          class:active={activeFocus === `col${cIdx + 1}`}
+          onclick={() => focusColumn(`col${cIdx + 1}`, cIdx)}
+          title="Přiblížit Sloupec {cIdx + 1}"
+        >
+          Sl. {cIdx + 1}
+        </button>
+      {/each}
     </div>
 
     <!-- Zoom In / Out / Reset Controls -->
@@ -453,33 +434,31 @@
             }
           </style>
 
-          <!-- Pure Vector Column Strip Template -->
-          <g id="_ColumnTemplate">
+          <!-- 10-slot Column Template -->
+          <g id="_ColumnTemplate10">
             <rect x="0.5" y="0.5" width="621" height="1611" fill="none" stroke="#000000" stroke-width="1.5" />
-            {#each templateSlotYs as y}
+            {#each templateSlotYs10 as y}
+              <rect x="110.5" y={y} width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5" />
+            {/each}
+          </g>
+
+          <!-- 5-slot Column Template -->
+          <g id="_ColumnTemplate5">
+            <rect x="0.5" y="0.5" width="621" height="811" fill="none" stroke="#000000" stroke-width="1.5" />
+            {#each templateSlotYs5 as y}
               <rect x="110.5" y={y} width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5" />
             {/each}
           </g>
         </defs>
 
-        <!-- Column 1 vector background -->
-        {#if printColumn === 'all' || printColumn === 1}
-          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[0]},210.788)">
-            <use xlink:href="#_ColumnTemplate" />
-          </g>
-        {/if}
-        <!-- Column 2 vector background -->
-        {#if printColumn === 'all' || printColumn === 2}
-          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[1]},210.788)">
-            <use xlink:href="#_ColumnTemplate" />
-          </g>
-        {/if}
-        <!-- Column 3 vector background -->
-        {#if printColumn === 'all' || printColumn === 3}
-          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[2]},210.788)">
-            <use xlink:href="#_ColumnTemplate" />
-          </g>
-        {/if}
+        <!-- Column vector backgrounds -->
+        {#each layout.columns as colCfg, cIdx}
+          {#if printColumn === 'all' || printColumn === cIdx + 1}
+            <g transform="matrix(1.17229,0,0,1.17231,{colOrigins[cIdx]},210.788)">
+              <use xlink:href={colCfg.capacity === 5 ? '#_ColumnTemplate5' : '#_ColumnTemplate10'} />
+            </g>
+          {/if}
+        {/each}
 
         <!-- Names Layer -->
         <g id="Příjmení">
@@ -532,17 +511,8 @@
                     height="{badge.rectH}px"
                     rx="{badge.rx}px"
                     ry="{badge.rx}px"
-                    style="fill: {badgeColor};"
+                    style="fill: {badge.color};"
                   />
-                  <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
-                    class="badge-text"
-                    style="font-size: {badge.fontSize}px;"
-                  >
-                    {badge.idStr}
-                  </text>
                   {#if badge.showDivider}
                     <line
                       x1="{badge.dividerX.toFixed(2)}"
@@ -553,21 +523,30 @@
                       stroke-width="2"
                     />
                   {/if}
+                  <text
+                    x="{badge.cx.toFixed(2)}px"
+                    y="{badge.textY.toFixed(2)}px"
+                    text-anchor="middle"
+                    class="badge-text"
+                    style="font-size: {badge.fontSize}px;"
+                  >
+                    {badge.idStr}
+                  </text>
                 {/if}
               </g>
             {/each}
           </g>
         {/if}
 
-        <!-- Crop marks for trimmer cutting -->
+        <!-- Crop Marks Layer -->
         {#if showCropMarks}
           <g id="Ořezové-značky">
-            {#each cropMarks as m}
+            {#each colCropMarks as mark}
               <line
-                x1="{m.x1.toFixed(2)}"
-                y1="{m.y1.toFixed(2)}"
-                x2="{m.x2.toFixed(2)}"
-                y2="{m.y2.toFixed(2)}"
+                x1="{mark.x1.toFixed(2)}"
+                y1="{mark.y1.toFixed(2)}"
+                x2="{mark.x2.toFixed(2)}"
+                y2="{mark.y2.toFixed(2)}"
                 stroke="#94a3b8"
                 stroke-width="1.2"
               />
@@ -575,30 +554,30 @@
           </g>
         {/if}
 
-        <!-- Printable 1:1 Calibration Scale -->
+        <!-- 100 mm Printable Calibration Scale -->
         {#if showScale}
           <g id="Měřítko-tisku">
             <line
-              x1="{startX.toFixed(2)}"
-              y1="{rulerY}"
-              x2="{(startX + rulerLengthPx).toFixed(2)}"
-              y2="{rulerY}"
+              x1={startX}
+              y1={rulerY}
+              x2={startX + rulerLengthPx}
+              y2={rulerY}
               stroke="#000000"
               stroke-width="2.5"
             />
             {#each rulerTicks as tick}
               <line
-                x1="{tick.x.toFixed(2)}"
-                y1="{tick.y1}"
-                x2="{tick.x.toFixed(2)}"
-                y2="{tick.y2}"
+                x1={tick.x}
+                y1={tick.y1}
+                x2={tick.x}
+                y2={tick.y2}
                 stroke="#000000"
-                stroke-width="{tick.strokeWidth}"
+                stroke-width={tick.strokeWidth}
               />
-              {#if tick.isMajor}
+              {#if tick.isMajor && tick.cmVal !== null}
                 <text
-                  x="{tick.x.toFixed(2)}"
-                  y="{rulerY - 32}"
+                  x={tick.x}
+                  y={rulerY - 32}
                   text-anchor="middle"
                   class="scale-text"
                   style="font-size: 22px; font-weight: 600;"
@@ -608,8 +587,8 @@
               {/if}
             {/each}
             <text
-              x="{(SVG_WIDTH / 2).toFixed(2)}"
-              y="{rulerY + 36}"
+              x={SVG_WIDTH / 2.0}
+              y={rulerY + 36}
               text-anchor="middle"
               class="scale-text"
               style="font-size: 26px; font-weight: 700;"
@@ -617,22 +596,22 @@
               KONTROLNÍ MĚŘÍTKO 1:1 (PŘESNĚ 100 mm / 10 cm)
             </text>
             <text
-              x="{(SVG_WIDTH / 2).toFixed(2)}"
-              y="{rulerY + 68}"
+              x={SVG_WIDTH / 2.0}
+              y={rulerY + 68}
               text-anchor="middle"
               class="scale-text"
               style="font-size: 20px; fill: #475569;"
             >
-              Při tisku zkontrolujte pravítkem. Pokud úsečka neměří přesně 100 mm, nastavte měřítko tisku na 100% (Skutečná velikost / Do not fit).
+              Při tisku zkontrolujte pravítkem. Pokud úsečka neměří přesně 100 mm, nastavte okraje na Žádné a měřítko na 100%.
             </text>
             <text
-              x="{(SVG_WIDTH / 2).toFixed(2)}"
-              y="{rulerY + 96}"
+              x={SVG_WIDTH / 2.0}
+              y={rulerY + 96}
               text-anchor="middle"
               class="scale-text"
               style="font-size: 18px; fill: #64748b;"
             >
-              Rozměr jednoho štítku: 48,6 × 12,9 mm
+              Rozměr jednoho štítku: 48,6 × 12,9 mm {layout.printMode === 'compact-strips' ? '• Úsporný tisk modulů (Nesting)' : ''}
             </text>
           </g>
         {/if}
@@ -648,183 +627,154 @@
     height: 100%;
     display: flex;
     flex-direction: column;
-    background: #e2e8f0;
     overflow: hidden;
+    background: #0f172a;
   }
 
-  /* Floating Zoom Widget */
   .zoom-toolbar {
     position: absolute;
     top: 1rem;
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 50;
+    right: 1.25rem;
+    z-index: 40;
     display: flex;
     align-items: center;
-    gap: 0.75rem;
-    background: rgba(255, 255, 255, 0.94);
+    gap: 0.5rem;
+    background: rgba(15, 23, 42, 0.88);
     backdrop-filter: blur(8px);
-    border: 1px solid #cbd5e1;
-    border-radius: 8px;
-    padding: 0.35rem 0.6rem;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.1);
-    user-select: none;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    padding: 0.35rem 0.5rem;
+    border-radius: 9999px;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
   }
 
   .column-group {
     display: flex;
+    align-items: center;
     gap: 0.2rem;
-    background: #f1f5f9;
-    padding: 0.2rem;
-    border-radius: 6px;
+    border-right: 1px solid rgba(255, 255, 255, 0.15);
+    padding-right: 0.4rem;
   }
 
   .focus-btn {
-    border: none;
     background: transparent;
-    padding: 0.25rem 0.55rem;
-    font-size: 0.75rem;
-    font-weight: 500;
-    color: #475569;
-    border-radius: 4px;
+    border: none;
+    color: #94a3b8;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.22rem 0.5rem;
+    border-radius: 9999px;
     cursor: pointer;
-    transition: all 0.15s;
+    transition: all 0.15s ease;
     white-space: nowrap;
   }
 
   .focus-btn:hover {
-    color: #0f172a;
-    background: #e2e8f0;
+    color: #f8fafc;
+    background: rgba(255, 255, 255, 0.1);
   }
 
   .focus-btn.active {
-    background: #ffffff;
-    color: #0284c7;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    background: #0284c7;
+    color: #ffffff;
   }
 
   .zoom-stepper {
     display: flex;
     align-items: center;
     gap: 0.15rem;
-    background: #f1f5f9;
-    padding: 0.2rem 0.3rem;
-    border-radius: 6px;
   }
 
   .step-btn {
     background: transparent;
     border: none;
-    width: 22px;
-    height: 22px;
+    color: #cbd5e1;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: 0.95rem;
-    font-weight: 700;
-    color: #334155;
-    border-radius: 4px;
+    font-weight: bold;
     cursor: pointer;
-    line-height: 1;
     transition: background 0.15s;
   }
 
   .step-btn:hover:not(:disabled) {
-    background: #e2e8f0;
-    color: #0f172a;
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
   }
 
   .step-btn:disabled {
-    opacity: 0.3;
+    opacity: 0.35;
     cursor: not-allowed;
   }
 
   .pct-btn {
     background: transparent;
     border: none;
-    padding: 0.15rem 0.45rem;
-    font-size: 0.78rem;
-    font-weight: 600;
-    color: #0284c7;
+    color: #38bdf8;
+    font-size: 0.75rem;
+    font-weight: 700;
+    min-width: 44px;
+    text-align: center;
+    padding: 0.2rem 0.3rem;
     border-radius: 4px;
     cursor: pointer;
     transition: background 0.15s;
-    min-width: 44px;
-    text-align: center;
   }
 
   .pct-btn:hover {
-    background: #e0f2fe;
+    background: rgba(56, 189, 248, 0.15);
   }
 
-  /* Scrollable SVG Viewport */
   .svg-scroll-viewport {
     flex: 1;
-    width: 100%;
-    height: 100%;
     overflow: auto;
-    display: block;
-    padding: 4.5rem 1.5rem 1.5rem 1.5rem;
-    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+    cursor: grab;
   }
 
   .svg-canvas-box {
-    display: block;
-    margin: 0 auto;
-    max-width: none;
+    flex-shrink: 0;
+    aspect-ratio: 3508 / 2481;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+    border-radius: 4px;
+    transition: width 0.15s ease-out;
   }
 
   svg {
-    width: 100%;
-    height: auto;
-    aspect-ratio: 3508 / 2481;
-    background: #ffffff;
-    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.12);
-    border-radius: 4px;
     display: block;
+    width: 100%;
+    height: 100%;
   }
 
   @media print {
-    *, *:before, *:after {
-      -webkit-print-color-adjust: exact !important;
-      print-color-adjust: exact !important;
+    .preview-wrapper {
+      background: transparent !important;
+      position: static !important;
+      overflow: visible !important;
+      width: 100% !important;
+      height: 100% !important;
     }
-
-    .no-print {
-      display: none !important;
-    }
-
-    .preview-wrapper,
-    .svg-scroll-viewport,
-    .svg-canvas-box {
-      background: none !important;
+    .svg-scroll-viewport {
+      overflow: visible !important;
       padding: 0 !important;
-      margin: 0 !important;
-      width: 297mm !important;
-      height: 210mm !important;
-      max-width: 297mm !important;
-      max-height: 210mm !important;
       display: block !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      overflow: hidden !important;
     }
-
-    svg {
+    .svg-canvas-box {
+      width: 100% !important;
+      max-width: 100% !important;
       box-shadow: none !important;
       border-radius: 0 !important;
-      width: 297mm !important;
-      height: 210mm !important;
-      min-width: 297mm !important;
-      min-height: 210mm !important;
-      max-width: 297mm !important;
-      max-height: 210mm !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
-      display: block !important;
+      aspect-ratio: auto !important;
+    }
+    .no-print {
+      display: none !important;
     }
   }
 </style>

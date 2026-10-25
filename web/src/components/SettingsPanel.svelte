@@ -1,10 +1,21 @@
 <script lang="ts">
-  import type { BadgeStyleId, PrintColumnOption, FlatEntry } from '../lib/types';
+  import type {
+    BadgeStyleId,
+    PrintColumnOption,
+    FlatEntry,
+    TableauLayoutConfig,
+    TableauPresetId,
+    NumberingDirection,
+    PrintLayoutMode,
+  } from '../lib/types';
   import {
     FONT_OPTIONS,
     BADGE_STYLES,
+    TABLEAU_PRESETS,
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
+    getDefaultLayout,
+    getTotalSlots,
     serializeProjectYAML,
     parseProjectYAML,
     getSlotCoordinates,
@@ -25,6 +36,7 @@
     showCropMarks = $bindable(true),
     showScale = $bindable(true),
     printColumn = $bindable('all'),
+    layout = $bindable(getDefaultLayout()),
     onClose = () => {},
   }: {
     flats?: FlatEntry[];
@@ -37,6 +49,7 @@
     showCropMarks: boolean;
     showScale: boolean;
     printColumn?: PrintColumnOption;
+    layout?: TableauLayoutConfig;
     onClose?: () => void;
   } = $props();
 
@@ -62,9 +75,50 @@
         showScale,
         printColumn,
       },
-      flats
+      flats,
+      layout
     );
   });
+
+  function selectPreset(presetId: TableauPresetId) {
+    const p = TABLEAU_PRESETS.find((item) => item.id === presetId);
+    if (!p) return;
+    layout.preset = presetId;
+    if (presetId !== 'custom') {
+      layout.columns = JSON.parse(JSON.stringify(p.columns));
+      layout.numberingDirection = p.numberingDirection;
+      layout.startNumber = p.startNumber;
+      layout.printMode = p.printMode;
+    }
+    syncFlatsWithLayout();
+  }
+
+  function syncFlatsWithLayout() {
+    const neededSlots = getTotalSlots(layout);
+    if (flats && flats.length < neededSlots) {
+      const expanded = [...flats];
+      for (let i = flats.length + 1; i <= neededSlots; i++) {
+        expanded.push({ id: i, name1: '', name2: '' });
+      }
+      flats = expanded;
+    }
+  }
+
+  function addCustomColumn() {
+    if (layout.columns.length >= 6) return;
+    layout.preset = 'custom';
+    layout.columns = [
+      ...layout.columns,
+      { id: layout.columns.length + 1, capacity: 10, skipTop: 0, skipBottom: 0 },
+    ];
+    syncFlatsWithLayout();
+  }
+
+  function removeCustomColumn() {
+    if (layout.columns.length <= 1) return;
+    layout.preset = 'custom';
+    layout.columns = layout.columns.slice(0, -1);
+  }
 
   async function handleCopyConfigYAML() {
     try {
@@ -103,18 +157,33 @@
       if (typeof s.showScale === 'boolean') showScale = s.showScale;
       if (s.printColumn !== undefined) printColumn = s.printColumn;
     }
+    if (parsed.layout) {
+      if (parsed.layout.preset) layout.preset = parsed.layout.preset;
+      if (parsed.layout.numberingDirection) layout.numberingDirection = parsed.layout.numberingDirection;
+      if (parsed.layout.startNumber !== undefined) layout.startNumber = parsed.layout.startNumber;
+      if (parsed.layout.printMode) layout.printMode = parsed.layout.printMode;
+      if (Array.isArray(parsed.layout.columns) && parsed.layout.columns.length > 0) {
+        layout.columns = parsed.layout.columns;
+      }
+    }
     if (parsed.flats && parsed.flats.length > 0 && flats) {
-      // Merge or replace flats
       const updated = [...flats];
       for (const f of parsed.flats) {
         const idx = updated.findIndex((u) => u.id === f.id);
         if (idx !== -1) {
-          updated[idx] = { ...updated[idx], name1: f.name1, name2: f.name2 };
+          updated[idx] = {
+            ...updated[idx],
+            customNumber: f.customNumber,
+            name1: f.name1,
+            name2: f.name2,
+          };
+        } else {
+          updated.push(f);
         }
       }
       flats = updated;
     }
-    feedbackMessage = 'Konfigurace i jména byla úspěšně načtena!';
+    feedbackMessage = 'Konfigurace, geometrie i jména byla úspěšně načtena!';
     copyFeedback = true;
     setTimeout(() => (copyFeedback = false), 3000);
   }
@@ -137,7 +206,6 @@
       }
     };
     reader.readAsText(file);
-    // Reset input so same file can be selected again
     target.value = '';
   }
 
@@ -151,6 +219,7 @@
     showCropMarks = true;
     showScale = true;
     printColumn = 'all';
+    layout = getDefaultLayout();
   }
 
   const colorPresets = [
@@ -168,15 +237,18 @@
 
   const sampleMetrics = $derived.by(() => {
     const coords = getSlotCoordinates(0, 0, badgeStyle, textPaddingLeft);
-    // Relative to slot origin (129.54, slotTop)
     const relTextX = coords.textX - (coords.colX + 129.54);
     const relCenterY = sampleSlotH / 2.0;
     const fs = calculateFontSize(sampleNames, currentFontOption, isBold, badgeStyle, textPaddingLeft);
-    const lineHeight = fs * 1.18;
-    const b1 = relCenterY - 0.5 * lineHeight + 0.38 * fs;
-    const b2 = relCenterY + 0.5 * lineHeight + 0.38 * fs;
 
-    const wm = getWatermarkStyle(badgeColor);
+    const isTwoLines = sampleNames.length > 1;
+    const lineHeight = fs * 1.18;
+    const b1 = isTwoLines
+      ? relCenterY - 0.5 * lineHeight + 0.38 * fs
+      : relCenterY + 0.38 * fs;
+    const b2 = isTwoLines ? relCenterY + 0.5 * lineHeight + 0.38 * fs : 0;
+
+    const wmStyle = getWatermarkStyle(badgeColor);
 
     return {
       relTextX,
@@ -185,28 +257,30 @@
       b1,
       b2,
       fontWeight: isBold ? (currentFontOption.id === 'Iosevka' ? 600 : 700) : 400,
-      wmFill: wm.fill,
-      wmOpacity: wm.opacity,
+      wmFill: wmStyle.fill,
+      wmOpacity: wmStyle.opacity,
     };
   });
 </script>
 
 <div class="settings-panel">
-  <!-- Live Sample Card Preview -->
+  <!-- Live 1:1 Sample Card Preview Header -->
   <div class="sample-preview-card">
     <div class="sample-preview-header">
       <div class="sample-title-wrap">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
           <circle cx="12" cy="12" r="10"></circle>
-          <polygon points="12 8 8 12 12 16 12 8"></polygon>
+          <line x1="12" y1="16" x2="12" y2="12"></line>
+          <line x1="12" y1="8" x2="12.01" y2="8"></line>
         </svg>
-        <span class="sample-label">Živý vzorový štítek (1:1 náhled)</span>
+        <span class="sample-label">Živý vzorový štítek (1:1 náhled změn)</span>
       </div>
-      <button type="button" class="btn-done" onclick={onClose} title="Zavřít nastavení a přejít na jména">
-        Zpět na jmenovky ✕
+      <button type="button" class="btn-done" onclick={onClose} title="Zavřít a přejít na jmenovky">
+        Hotovo ✕
       </button>
     </div>
 
+    <!-- Live SVG Card of 1 Slot -->
     <div class="sample-canvas-box">
       <svg
         viewBox="0 0 {sampleSlotW} {sampleSlotH}"
@@ -214,8 +288,8 @@
         height="100%"
         class="sample-svg"
       >
-        <!-- Slot background boundary -->
-        <rect x="1" y="1" width={sampleSlotW - 2} height={sampleSlotH - 2} fill="#ffffff" stroke="#94a3b8" stroke-width="1.5" />
+        <!-- Background white slot plate -->
+        <rect x="0" y="0" width={sampleSlotW} height={sampleSlotH} fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
 
         <!-- Resident Names -->
         <g id="sample-text">
@@ -264,6 +338,133 @@
   </div>
 
   <div class="settings-scroll-body">
+    <!-- Section 0: Tableau Type & Presets -->
+    <div class="settings-card">
+      <div class="section-header-flex">
+        <h4 class="card-title">Typ a rozložení tabla (Presety & Geometrie)</h4>
+        <span class="badge-tag">{getTotalSlots(layout)} bytů celkem</span>
+      </div>
+
+      <div class="form-field">
+        <label for="preset-select">Přednastavený typ tabla (Preset):</label>
+        <select
+          id="preset-select"
+          class="select-input"
+          value={layout.preset}
+          onchange={(e) => selectPreset((e.target as HTMLSelectElement).value as TableauPresetId)}
+        >
+          {#each TABLEAU_PRESETS as p}
+            <option value={p.id}>{p.label}</option>
+          {/each}
+        </select>
+        <p class="field-hint">
+          {TABLEAU_PRESETS.find((p) => p.id === layout.preset)?.description || ''}
+        </p>
+      </div>
+
+      <div class="grid-2" style="margin-top: 0.75rem;">
+        <div class="form-field">
+          <label for="num-direction-select">Směr číslování bytů:</label>
+          <select
+            id="num-direction-select"
+            class="select-input"
+            bind:value={layout.numberingDirection}
+          >
+            <option value="bottom-up">Zdola nahoru (Tesla standard: 01 dole)</option>
+            <option value="top-down">Shora dolů (01 nahoře)</option>
+            <option value="row-left-right">Po řádcích zleva doprava</option>
+          </select>
+        </div>
+
+        <div class="form-field">
+          <label for="start-num-input">Počáteční číslo bytu:</label>
+          <input
+            id="start-num-input"
+            type="number"
+            class="number-input"
+            min="1"
+            max="999"
+            bind:value={layout.startNumber}
+          />
+        </div>
+      </div>
+
+      <div class="form-field" style="margin-top: 0.75rem;">
+        <span class="field-label">Režim rozložení tisku:</span>
+        <div class="segmented-control">
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={layout.printMode === 'frame-1to1'}
+            onclick={() => (layout.printMode = 'frame-1to1')}
+          >
+            Fyzický rám (1:1 rozteče rámu)
+          </button>
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={layout.printMode === 'compact-strips'}
+            onclick={() => (layout.printMode = 'compact-strips')}
+          >
+            Úsporný tisk modulů (Nesting – až 5 modulů na A4)
+          </button>
+        </div>
+        <p class="field-hint">
+          {layout.printMode === 'frame-1to1'
+            ? 'Sloupce jsou rozmístěny s přesnými roztečemi odpovídajícími fyzickému hliníkovému rámu Tesla.'
+            : 'Sloupce jsou seřazeny těsně vedle sebe, což umožňuje vytisknout až 5 modulů (50 jmenovek) na jediný list A4.'}
+        </p>
+      </div>
+
+      <!-- Custom column controls if custom preset -->
+      {#if layout.preset === 'custom'}
+        <div class="custom-cols-box">
+          <div class="custom-cols-header">
+            <span class="field-label">Sloupce tabla ({layout.columns.length}):</span>
+            <div class="mini-btn-group">
+              <button
+                type="button"
+                class="btn-mini"
+                onclick={addCustomColumn}
+                disabled={layout.columns.length >= 6}
+                title="Přidat další sloupec"
+              >
+                + Přidat sloupec
+              </button>
+              <button
+                type="button"
+                class="btn-mini"
+                onclick={removeCustomColumn}
+                disabled={layout.columns.length <= 1}
+                title="Odebrat poslední sloupec"
+              >
+                − Odebrat
+              </button>
+            </div>
+          </div>
+
+          <div class="columns-config-grid">
+            {#each layout.columns as col, idx}
+              <div class="col-config-item">
+                <span class="col-item-title">Sloupec {col.id}</span>
+                <div class="col-prop-row">
+                  <span class="prop-label">Kapacita:</span>
+                  <select bind:value={col.capacity} class="select-mini" onchange={syncFlatsWithLayout}>
+                    <option value={10}>10 tlačítek (TT10)</option>
+                    <option value={5}>5 tlačítek (TT5)</option>
+                  </select>
+                </div>
+                <div class="col-prop-row">
+                  <span class="prop-label">Vynechat nahoře:</span>
+                  <input type="number" min="0" max={col.capacity - 1} bind:value={col.skipTop} class="num-mini" onchange={syncFlatsWithLayout} />
+                </div>
+              </div>
+            {/each}
+          </div>
+        </div>
+      {/if}
+    </div>
+
     <!-- Section 1: Typography -->
     <div class="settings-card">
       <h4 class="card-title">Písmo a typografie</h4>
@@ -302,74 +503,88 @@
 
     <!-- Section 2: Badge Style & Colors -->
     <div class="settings-card">
-      <h4 class="card-title">Čísla bytů a šablona štítku</h4>
-      <div class="grid-2">
-        <div class="form-field">
-          <label for="side-style-select">Šablona štítku:</label>
-          <select id="side-style-select" bind:value={badgeStyle} class="select-input">
-            {#each BADGE_STYLES as s}
-              <option value={s.id}>{s.label}</option>
-            {/each}
-          </select>
-          <p class="field-help">
-            {BADGE_STYLES.find((s) => s.id === badgeStyle)?.description}
-          </p>
-        </div>
+      <h4 class="card-title">Styl a barva čísla bytu</h4>
+      <div class="badge-styles-grid">
+        {#each BADGE_STYLES as s}
+          <button
+            type="button"
+            class="badge-style-btn"
+            class:active={badgeStyle === s.id}
+            onclick={() => {
+              badgeStyle = s.id;
+              if (s.id !== 'none') showIds = true;
+            }}
+          >
+            <div class="badge-style-header">
+              <span class="style-name">{s.label}</span>
+              {#if badgeStyle === s.id}
+                <span class="check-icon">✓</span>
+              {/if}
+            </div>
+            <p class="style-desc">{s.description}</p>
+          </button>
+        {/each}
+      </div>
 
-        <div class="form-field" class:disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}>
-          <label for="side-color-input">Barva čísla bytu:</label>
+      {#if badgeStyle !== 'none' && badgeStyle !== 'inline-num'}
+        <div class="form-field" style="margin-top: 1rem;">
+          <span class="field-label">Barva podkladu čísla:</span>
           <div class="color-picker-row">
-            <input
-              id="side-color-input"
-              type="color"
-              bind:value={badgeColor}
-              class="color-input-lg"
-              disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}
-            />
+            <div class="color-input-wrap">
+              <input
+                type="color"
+                bind:value={badgeColor}
+                class="color-picker-square"
+                title="Výběr libovolné barvy"
+              />
+              <span class="color-hex-text">{badgeColor}</span>
+            </div>
             <div class="presets-wrap">
-              {#each colorPresets as preset}
+              {#each colorPresets as p}
                 <button
                   type="button"
                   class="preset-chip"
-                  style="background-color: {preset.value};"
-                  title={preset.label}
-                  disabled={badgeStyle === 'none' || badgeStyle === 'inline-num'}
-                  onclick={() => (badgeColor = preset.value)}
+                  style="background-color: {p.value};"
+                  title={p.label}
+                  onclick={() => (badgeColor = p.value)}
                 ></button>
               {/each}
             </div>
           </div>
         </div>
-      </div>
+      {/if}
 
       <div class="checkbox-row">
         <label class="custom-checkbox" class:disabled={badgeStyle === 'none'}>
-          <input type="checkbox" bind:checked={showIds} disabled={badgeStyle === 'none'} />
-          <span>Zobrazit čísla bytů v tablu</span>
+          <input
+            type="checkbox"
+            bind:checked={showIds}
+            disabled={badgeStyle === 'none'}
+          />
+          <span>Zobrazit čísla bytů na štítcích (Flat IDs)</span>
         </label>
       </div>
     </div>
 
-    <!-- Section 3: Sazba / Odsazení -->
+    <!-- Section 3: Sazba & Odsazení textu -->
     <div class="settings-card">
-      <h4 class="card-title">Sazba & odsazení jmenovek</h4>
+      <h4 class="card-title">Sazba a odsazení jmen</h4>
       <p class="card-desc">
-        Odsazení textu od levého okraje štítku chrání jména před překrytím a stínem plastového rámečku tabla při bočním pohledu.
+        Nastavte levé odsazení textu pro dokonalou čitelnost i pod okrajem hliníkového profilu tabla.
       </p>
+
       <div class="slider-box">
         <div class="slider-header">
-          <span>Levé odsazení textu:</span>
-          <span class="slider-display">
-            {(textPaddingLeft / (3508 / 297)).toFixed(1)} mm ({Math.round(textPaddingLeft)} px)
-          </span>
+          <span class="slider-label">Odsazení od okraje:</span>
+          <span class="slider-val">{(textPaddingLeft / 11.811).toFixed(1)} mm ({Math.round(textPaddingLeft)} px)</span>
         </div>
         <input
           type="range"
-          min="45"
-          max="130"
-          step="1"
+          min="35.4"
+          max="177.2"
+          step="5.9"
           bind:value={textPaddingLeft}
-          class="full-range"
+          class="slider-input"
         />
         <div class="preset-buttons-row">
           <button
@@ -423,35 +638,21 @@
             class:active={printColumn === 'all'}
             onclick={() => (printColumn = 'all')}
           >
-            Všechny (1+2+3)
+            Všechny sloupce
           </button>
-          <button
-            type="button"
-            class="seg-btn"
-            class:active={printColumn === 1}
-            onclick={() => (printColumn = 1)}
-          >
-            Sloupec 1 (01–10)
-          </button>
-          <button
-            type="button"
-            class="seg-btn"
-            class:active={printColumn === 2}
-            onclick={() => (printColumn = 2)}
-          >
-            Sloupec 2 (11–20)
-          </button>
-          <button
-            type="button"
-            class="seg-btn"
-            class:active={printColumn === 3}
-            onclick={() => (printColumn = 3)}
-          >
-            Sloupec 3 (21–28)
-          </button>
+          {#each layout.columns as colCfg, cIdx}
+            <button
+              type="button"
+              class="seg-btn"
+              class:active={printColumn === cIdx + 1}
+              onclick={() => (printColumn = cIdx + 1)}
+            >
+              Sloupec {cIdx + 1}
+            </button>
+          {/each}
         </div>
         <p class="field-hint">
-          Při volbě jednoho sloupce se na formát A4 vytiskne pouze daný modul na své přesné fyzické pozici. Šetří toner a inkoust při výměně jmenovek jen v jednom sloupci.
+          Při volbě jednoho sloupce se na formát A4 vytiskne pouze daný modul na své přesné pozici. Šetří toner a inkoust při výměně jmenovek jen v jednom sloupci.
         </p>
       </div>
     </div>
@@ -470,10 +671,9 @@
         {/if}
       </div>
       <p class="card-desc">
-        Kompletní stav projektu (veškeré jmenovky 28 bytů i nastavení vzhledu a sazby) můžete uložit do čitelného souboru YAML s komentáři nebo načíst zpět.
+        Kompletní stav projektu (geometrie tabla, seznam jmen i nastavení vzhledu a sazby) můžete uložit do čitelného souboru YAML s komentáři nebo načíst zpět.
       </p>
 
-      <!-- Hidden file input for YAML upload -->
       <input
         type="file"
         bind:this={fileInputEl}
@@ -534,16 +734,15 @@
     display: flex;
     flex-direction: column;
     height: 100%;
-    background: #f8fafc;
-    box-sizing: border-box;
     overflow: hidden;
+    background: #f8fafc;
   }
 
   .sample-preview-card {
     background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.85rem 1.25rem;
-    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    border-bottom: 2px solid #e2e8f0;
+    padding: 0.75rem 1rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     flex-shrink: 0;
   }
 
@@ -566,6 +765,15 @@
     color: #0369a1;
     text-transform: uppercase;
     letter-spacing: 0.03em;
+  }
+
+  .badge-tag {
+    font-size: 0.75rem;
+    font-weight: 700;
+    color: #0369a1;
+    background: #e0f2fe;
+    padding: 0.2rem 0.5rem;
+    border-radius: 9999px;
   }
 
   .btn-done {
@@ -602,126 +810,278 @@
   .settings-scroll-body {
     flex: 1;
     overflow-y: auto;
-    padding: 1rem 1.25rem;
+    padding: 1rem;
     display: flex;
     flex-direction: column;
     gap: 1rem;
-    box-sizing: border-box;
   }
 
   .settings-card {
     background: #ffffff;
     border: 1px solid #e2e8f0;
     border-radius: 8px;
-    padding: 1rem 1.15rem;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
+    padding: 1rem;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
   }
 
   .card-title {
-    margin: 0 0 0.65rem 0;
-    font-size: 0.85rem;
+    font-size: 0.88rem;
     font-weight: 700;
-    color: #334155;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
+    color: #0f172a;
+    margin: 0 0 0.75rem 0;
   }
 
   .card-desc {
     font-size: 0.78rem;
     color: #64748b;
     margin: 0 0 0.75rem 0;
-    line-height: 1.4;
-  }
-
-  .grid-2 {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 1rem;
+    line-height: 1.45;
   }
 
   .form-field {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
-    font-size: 0.8rem;
-    color: #475569;
-    font-weight: 500;
   }
 
-  .form-field.disabled {
-    opacity: 0.45;
-    pointer-events: none;
-  }
-
+  .form-field label,
   .field-label {
     font-size: 0.8rem;
-    color: #475569;
-    font-weight: 500;
+    font-weight: 600;
+    color: #334155;
   }
 
-  .field-help {
-    font-size: 0.72rem;
+  .field-hint {
+    font-size: 0.74rem;
     color: #64748b;
-    margin: 0.2rem 0 0 0;
-    line-height: 1.3;
+    margin: 0.25rem 0 0 0;
+    line-height: 1.4;
   }
 
-  .select-input {
+  .select-input,
+  .number-input {
+    width: 100%;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
-    padding: 0.42rem 0.6rem;
+    padding: 0.45rem 0.65rem;
     font-size: 0.82rem;
     background: #ffffff;
     color: #1e293b;
     outline: none;
-    cursor: pointer;
-    width: 100%;
     box-sizing: border-box;
+    transition: border-color 0.15s;
+  }
+
+  .select-input:focus,
+  .number-input:focus {
+    border-color: #0284c7;
+  }
+
+  .grid-2 {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 0.85rem;
   }
 
   .segmented-control {
     display: flex;
-    border: 1px solid #cbd5e1;
+    background: #f1f5f9;
+    padding: 0.2rem;
     border-radius: 6px;
-    overflow: hidden;
-    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    gap: 0.2rem;
   }
 
   .seg-btn {
     flex: 1;
-    border: none;
-    background: transparent;
-    padding: 0.42rem 0.5rem;
-    font-size: 0.78rem;
-    cursor: pointer;
-    color: #475569;
-    font-weight: 500;
-    transition: all 0.15s;
-    display: flex;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: 0.3rem;
+    padding: 0.35rem 0.5rem;
+    border: none;
+    border-radius: 4px;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.15s ease;
+  }
+
+  .seg-btn:hover {
+    color: #0f172a;
   }
 
   .seg-btn.active {
-    background: #0284c7;
-    color: #ffffff;
+    background: #ffffff;
+    color: #0284c7;
+    font-weight: 700;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  }
+
+  .custom-cols-box {
+    margin-top: 0.85rem;
+    padding: 0.75rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  .custom-cols-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+  }
+
+  .mini-btn-group {
+    display: flex;
+    gap: 0.35rem;
+  }
+
+  .btn-mini {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    padding: 0.2rem 0.45rem;
+    cursor: pointer;
+    color: #334155;
+  }
+
+  .btn-mini:hover:not(:disabled) {
+    background: #e2e8f0;
+  }
+
+  .btn-mini:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+
+  .columns-config-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 0.5rem;
+    margin-top: 0.35rem;
+  }
+
+  .col-config-item {
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 4px;
+    padding: 0.45rem;
+    font-size: 0.75rem;
+  }
+
+  .col-item-title {
+    font-weight: 700;
+    color: #0f172a;
+    display: block;
+    margin-bottom: 0.35rem;
+  }
+
+  .col-prop-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 0.25rem;
+  }
+
+  .select-mini,
+  .num-mini {
+    padding: 0.15rem 0.3rem;
+    font-size: 0.72rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 3px;
+    max-width: 85px;
+  }
+
+  .badge-styles-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.45rem;
+  }
+
+  .badge-style-btn {
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+    padding: 0.65rem 0.75rem;
+    border: 1.5px solid #e2e8f0;
+    border-radius: 6px;
+    background: #ffffff;
+    cursor: pointer;
+    transition: all 0.15s ease-in-out;
+  }
+
+  .badge-style-btn:hover {
+    border-color: #94a3b8;
+    background: #f8fafc;
+  }
+
+  .badge-style-btn.active {
+    border-color: #0284c7;
+    background: #f0f9ff;
+    box-shadow: 0 1px 4px rgba(2, 132, 199, 0.12);
+  }
+
+  .badge-style-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    width: 100%;
+  }
+
+  .style-name {
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #1e293b;
+  }
+
+  .check-icon {
+    font-size: 0.82rem;
+    font-weight: 900;
+    color: #0284c7;
+  }
+
+  .style-desc {
+    font-size: 0.74rem;
+    color: #64748b;
+    margin: 0.2rem 0 0 0;
+    line-height: 1.35;
   }
 
   .color-picker-row {
     display: flex;
     align-items: center;
-    gap: 0.5rem;
+    gap: 0.75rem;
   }
 
-  .color-input-lg {
-    width: 32px;
-    height: 32px;
+  .color-input-wrap {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+  }
+
+  .color-picker-square {
+    -webkit-appearance: none;
+    -moz-appearance: none;
+    appearance: none;
+    width: 26px;
+    height: 26px;
     border: 1px solid #cbd5e1;
     border-radius: 6px;
     padding: 0;
     cursor: pointer;
     background: transparent;
+  }
+
+  .color-hex-text {
+    font-family: monospace;
+    font-size: 0.78rem;
+    color: #475569;
   }
 
   .presets-wrap {
@@ -776,7 +1136,6 @@
     pointer-events: none;
   }
 
-  /* Slider box */
   .slider-box {
     background: #f8fafc;
     border: 1px solid #e2e8f0;
@@ -789,46 +1148,45 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
+    margin-bottom: 0.4rem;
+  }
+
+  .slider-label {
     font-size: 0.8rem;
     font-weight: 600;
     color: #334155;
-    margin-bottom: 0.5rem;
   }
 
-  .slider-display {
+  .slider-val {
     font-family: monospace;
+    font-size: 0.8rem;
     font-weight: 700;
     color: #0284c7;
-    background: #e0f2fe;
-    padding: 0.15rem 0.45rem;
-    border-radius: 4px;
-    font-size: 0.8rem;
   }
 
-  .full-range {
+  .slider-input {
     width: 100%;
-    accent-color: #0284c7;
     cursor: pointer;
-    margin-bottom: 0.65rem;
+    accent-color: #0284c7;
   }
 
   .preset-buttons-row {
     display: flex;
-    gap: 0.5rem;
+    gap: 0.4rem;
+    margin-top: 0.6rem;
   }
 
   .btn-preset-lg {
     flex: 1;
-    padding: 0.35rem 0.4rem;
-    font-size: 0.76rem;
-    font-weight: 500;
     background: #ffffff;
     border: 1px solid #cbd5e1;
-    border-radius: 6px;
+    border-radius: 5px;
+    padding: 0.35rem 0.5rem;
+    font-size: 0.74rem;
+    font-weight: 500;
     color: #475569;
     cursor: pointer;
-    text-align: center;
-    transition: all 0.12s;
+    transition: all 0.15s ease-in-out;
   }
 
   .btn-preset-lg:hover {
@@ -842,27 +1200,6 @@
     border-color: #0284c7;
     color: #ffffff;
     font-weight: 600;
-  }
-
-  /* YAML sharing box */
-  .config-yaml-box {
-    width: 100%;
-    box-sizing: border-box;
-    font-family: monospace;
-    font-size: 0.8rem;
-    padding: 0.65rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    background: #f8fafc;
-    color: #1e293b;
-    resize: vertical;
-    outline: none;
-    line-height: 1.45;
-  }
-
-  .config-yaml-box:focus {
-    border-color: #0284c7;
-    background: #ffffff;
   }
 
   .file-action-buttons {
@@ -890,6 +1227,26 @@
   .btn-primary:hover {
     background: #0369a1;
     border-color: #0369a1;
+  }
+
+  .config-yaml-box {
+    width: 100%;
+    box-sizing: border-box;
+    font-family: monospace;
+    font-size: 0.8rem;
+    padding: 0.65rem;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    background: #f8fafc;
+    color: #1e293b;
+    resize: vertical;
+    outline: none;
+    line-height: 1.45;
+  }
+
+  .config-yaml-box:focus {
+    border-color: #0284c7;
+    background: #ffffff;
   }
 
   .yaml-actions {

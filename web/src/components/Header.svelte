@@ -1,11 +1,13 @@
 <script lang="ts">
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
   import {
     FONT_OPTIONS,
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
+    getDefaultLayout,
+    getTotalSlots,
   } from '../lib/tableauConfig';
 
   let {
@@ -19,6 +21,7 @@
     showCropMarks = $bindable(true),
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
     printColumn = $bindable('all'),
+    layout = $bindable(getDefaultLayout()),
     onToggleSettings = () => {},
     isSettingsOpen = false,
   }: {
@@ -32,6 +35,7 @@
     showCropMarks?: boolean;
     textPaddingLeft?: number;
     printColumn?: PrintColumnOption;
+    layout?: TableauLayoutConfig;
     onToggleSettings?: () => void;
     isSettingsOpen?: boolean;
   } = $props();
@@ -51,7 +55,7 @@
     reader.onload = (e) => {
       const text = e.target?.result as string;
       if (text) {
-        flats = parseCSV(text);
+        flats = parseCSV(text, getTotalSlots(layout));
       }
     };
     reader.readAsText(file);
@@ -75,7 +79,8 @@
       badgeStyle,
       showCropMarks,
       textPaddingLeft,
-      printColumn
+      printColumn,
+      layout
     );
     const date = new Date().toISOString().slice(0, 10);
     const suffix = printColumn === 'all' ? '' : `-sloupec${printColumn}`;
@@ -110,16 +115,23 @@
       .split(/\r?\n/)
       .map((l) => l.trim());
 
-    const updated = flats.map((f, idx) => {
-      const line = lines[idx] || '';
+    const total = getTotalSlots(layout);
+    const updated = [...flats];
+    while (updated.length < total) {
+      updated.push({ id: updated.length + 1, name1: '', name2: '' });
+    }
+
+    for (let i = 0; i < total; i++) {
+      const line = lines[i] || '';
       let parts = line.split(/[;/]/).map((p) => p.trim());
       if (parts.length === 1 && parts[0] === '') parts = [];
-      return {
-        id: f.id,
+      updated[i] = {
+        ...updated[i],
+        id: i + 1,
         name1: parts[0] || '',
         name2: parts[1] || '',
       };
-    });
+    }
 
     flats = updated;
     showBatchModal = false;
@@ -127,7 +139,7 @@
 
   function handleReset() {
     if (confirm('Opravdu chcete obnovit výchozí vzorová jména i nastavení?')) {
-      flats = createDefaultFlats();
+      flats = createDefaultFlats(getTotalSlots(layout));
       selectedFontId = 'TechnicNT';
       isBold = true;
       badgeStyle = 'classic';
@@ -390,32 +402,18 @@
               class:active={printColumn === 'all'}
               onclick={() => (printColumn = 'all')}
             >
-              Všechny (1+2+3)
+              Všechny ({layout.columns.length})
             </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 1}
-              onclick={() => (printColumn = 1)}
-            >
-              Sloupec 1 (01–10)
-            </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 2}
-              onclick={() => (printColumn = 2)}
-            >
-              Sloupec 2 (11–20)
-            </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 3}
-              onclick={() => (printColumn = 3)}
-            >
-              Sloupec 3 (21–28)
-            </button>
+            {#each layout.columns as colCfg, cIdx}
+              <button
+                type="button"
+                class="seg-btn"
+                class:active={printColumn === cIdx + 1}
+                onclick={() => (printColumn = cIdx + 1)}
+              >
+                Sloupec {cIdx + 1}
+              </button>
+            {/each}
           </div>
         </div>
 

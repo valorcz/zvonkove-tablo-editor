@@ -8,8 +8,10 @@
     FONT_OPTIONS,
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
+    getDefaultLayout,
+    getTotalSlots,
   } from './lib/tableauConfig';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from './lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
   const LEGACY_STORAGE_KEYS = [
@@ -29,6 +31,7 @@
     showCropMarks: boolean;
     textPaddingLeft: number;
     printColumn?: PrintColumnOption;
+    layout?: TableauLayoutConfig;
     leftPaneView?: 'names' | 'settings';
   }
 
@@ -43,31 +46,42 @@
       }
       if (saved) {
         const parsed = JSON.parse(saved);
-        if (Array.isArray(parsed.flats) && parsed.flats.length === 28) {
-          return {
-            flats: parsed.flats,
-            badgeColor: parsed.badgeColor || DEFAULT_BADGE_FILL,
-            selectedFontId: parsed.selectedFontId || 'TechnicNT',
-            isBold: typeof parsed.isBold === 'boolean' ? parsed.isBold : true,
-            showScale: typeof parsed.showScale === 'boolean' ? parsed.showScale : true,
-            showIds: typeof parsed.showIds === 'boolean' ? parsed.showIds : false,
-            badgeStyle: parsed.badgeStyle || 'classic',
-            showCropMarks:
-              typeof parsed.showCropMarks === 'boolean' ? parsed.showCropMarks : true,
-            textPaddingLeft:
-              typeof parsed.textPaddingLeft === 'number'
-                ? parsed.textPaddingLeft
-                : DEFAULT_TEXT_PADDING_LEFT,
-            printColumn: parsed.printColumn || 'all',
-            leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
-          };
+        const parsedLayout: TableauLayoutConfig = parsed.layout || getDefaultLayout();
+        const needed = getTotalSlots(parsedLayout);
+        let loadedFlats = Array.isArray(parsed.flats) ? parsed.flats : [];
+        if (loadedFlats.length < needed) {
+          const sample = createDefaultFlats(needed);
+          for (let i = loadedFlats.length; i < needed; i++) {
+            loadedFlats.push(sample[i]);
+          }
         }
+
+        return {
+          flats: loadedFlats,
+          badgeColor: parsed.badgeColor || DEFAULT_BADGE_FILL,
+          selectedFontId: parsed.selectedFontId || 'TechnicNT',
+          isBold: typeof parsed.isBold === 'boolean' ? parsed.isBold : true,
+          showScale: typeof parsed.showScale === 'boolean' ? parsed.showScale : true,
+          showIds: typeof parsed.showIds === 'boolean' ? parsed.showIds : false,
+          badgeStyle: parsed.badgeStyle || 'classic',
+          showCropMarks:
+            typeof parsed.showCropMarks === 'boolean' ? parsed.showCropMarks : true,
+          textPaddingLeft:
+            typeof parsed.textPaddingLeft === 'number'
+              ? parsed.textPaddingLeft
+              : DEFAULT_TEXT_PADDING_LEFT,
+          printColumn: parsed.printColumn || 'all',
+          layout: parsedLayout,
+          leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
+        };
       }
     } catch {
       // Fallback
     }
+
+    const defaultLayout = getDefaultLayout();
     return {
-      flats: createDefaultFlats(),
+      flats: createDefaultFlats(getTotalSlots(defaultLayout)),
       badgeColor: DEFAULT_BADGE_FILL,
       selectedFontId: 'TechnicNT',
       isBold: true,
@@ -77,6 +91,7 @@
       showCropMarks: true,
       textPaddingLeft: DEFAULT_TEXT_PADDING_LEFT,
       printColumn: 'all',
+      layout: defaultLayout,
       leftPaneView: 'names',
     };
   }
@@ -92,11 +107,14 @@
   let showCropMarks: boolean = $state(initial.showCropMarks);
   let textPaddingLeft: number = $state(initial.textPaddingLeft);
   let printColumn: PrintColumnOption = $state(initial.printColumn || 'all');
+  let layout: TableauLayoutConfig = $state(initial.layout || getDefaultLayout());
   let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
   let mobileTab: 'names' | 'settings' | 'preview' = $state(
     initial.leftPaneView === 'settings' ? 'settings' : 'names'
   );
   let isDraggingFile: boolean = $state(false);
+
+  const totalSlots = $derived(getTotalSlots(layout));
 
   const currentFontOption = $derived(
     FONT_OPTIONS.find((f) => f.id === selectedFontId) || FONT_OPTIONS[0]
@@ -118,6 +136,7 @@
           showCropMarks,
           textPaddingLeft,
           printColumn,
+          layout,
           leftPaneView,
         })
       );
@@ -135,22 +154,27 @@
   }
 
   function handleDragLeave(e: DragEvent) {
-    if (!e.relatedTarget) {
-      isDraggingFile = false;
-    }
+    e.preventDefault();
+    isDraggingFile = false;
   }
 
   function handleDrop(e: DragEvent) {
     e.preventDefault();
     isDraggingFile = false;
-    const file = e.dataTransfer?.files[0];
-    if (!file) return;
+
+    const files = e.dataTransfer?.files;
+    if (!files || files.length === 0) return;
+
+    const file = files[0];
+    if (!file.name.endsWith('.csv') && !file.type.includes('csv') && !file.type.includes('text')) {
+      return;
+    }
 
     const reader = new FileReader();
     reader.onload = (event) => {
       const text = event.target?.result as string;
       if (text) {
-        flats = parseCSV(text);
+        flats = parseCSV(text, totalSlots);
       }
     };
     reader.readAsText(file);
@@ -186,6 +210,7 @@
       bind:showCropMarks
       bind:textPaddingLeft
       bind:printColumn
+      bind:layout
       onToggleSettings={toggleSettingsFromHeader}
       isSettingsOpen={leftPaneView === 'settings' || mobileTab === 'settings'}
     />
@@ -205,7 +230,7 @@
           <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
           <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
         </svg>
-        <span>Jmenovky (28)</span>
+        <span>Jmenovky ({totalSlots})</span>
       </button>
 
       <button
@@ -269,7 +294,7 @@
               <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path>
               <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"></path>
             </svg>
-            <span>Jmenovky (28 bytů)</span>
+            <span>Jmenovky ({totalSlots} bytů)</span>
           </button>
           <button
             type="button"
@@ -306,6 +331,7 @@
             {isBold}
             {badgeStyle}
             {textPaddingLeft}
+            {layout}
           />
         {:else}
           <SettingsPanel
@@ -319,6 +345,7 @@
             bind:showCropMarks
             bind:showScale
             bind:printColumn
+            bind:layout
             onClose={() => {
               leftPaneView = 'names';
               mobileTab = 'names';
@@ -344,6 +371,7 @@
         {showCropMarks}
         {textPaddingLeft}
         {printColumn}
+        {layout}
       />
     </div>
   </main>
@@ -352,13 +380,13 @@
   {#if isDraggingFile}
     <div class="dropzone-overlay">
       <div class="dropzone-card">
-        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2">
+        <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
           <polyline points="17 8 12 3 7 8"></polyline>
           <line x1="12" y1="3" x2="12" y2="15"></line>
         </svg>
-        <h3>Přetáhněte sem CSV soubor</h3>
-        <p>Jména se automaticky načtou do všech 28 zvonků</p>
+        <div class="dropzone-text">Pusťte soubor CSV sem</div>
+        <div class="dropzone-sub">Automaticky načte jmenovky pro tablo</div>
       </div>
     </div>
   {/if}
@@ -369,9 +397,10 @@
     margin: 0;
     padding: 0;
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-    color: #1e293b;
-    background: #f8fafc;
+    background-color: #0f172a;
+    color: #0f172a;
     overflow: hidden;
+    height: 100vh;
   }
 
   .app-layout {
@@ -379,98 +408,79 @@
     flex-direction: column;
     height: 100vh;
     width: 100vw;
-    position: relative;
     overflow: hidden;
   }
 
-  /* Mobile Tab Bar (Hidden on desktop) */
-  .mobile-tab-bar {
-    display: none;
-    background: #ffffff;
-    border-bottom: 1px solid #e2e8f0;
-    padding: 0.35rem 0.5rem;
-    gap: 0.35rem;
-  }
-
-  .mobile-tab-btn {
-    flex: 1;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: 0.35rem;
-    padding: 0.45rem 0.4rem;
-    font-size: 0.8rem;
-    font-weight: 600;
-    background: transparent;
-    border: 1px solid transparent;
-    border-radius: 6px;
-    cursor: pointer;
-    color: #64748b;
-    transition: all 0.15s;
-    white-space: nowrap;
-  }
-
-  .mobile-tab-btn.active {
-    background: #e0f2fe;
-    border-color: #bae6fd;
-    color: #0369a1;
-  }
-
-  /* Main 2-Pane Content */
   .main-content {
-    flex: 1;
     display: flex;
+    flex: 1;
     overflow: hidden;
     position: relative;
+    background: #0f172a;
   }
 
   .pane {
     height: 100%;
     overflow: hidden;
+    position: relative;
     box-sizing: border-box;
-    display: flex;
-    flex-direction: column;
   }
 
-  /* Left Pane (Editor / Settings) */
+  /* Desktop layout: Left pane for editor/settings, right pane for SVG preview */
   .left-pane {
     flex: 1.15;
-    border-right: 1px solid #e2e8f0;
+    min-width: 380px;
     background: #f8fafc;
-    min-width: 0;
+    border-right: 1px solid #334155;
+    display: flex;
+    flex-direction: column;
+    z-index: 10;
   }
 
+  .preview-pane {
+    flex: 1;
+    min-width: 400px;
+    display: flex;
+    flex-direction: column;
+    background: #0f172a;
+  }
+
+  /* Left pane header with segmented tabs */
   .left-pane-header {
     background: #ffffff;
     border-bottom: 1px solid #e2e8f0;
-    padding: 0.5rem 1rem;
+    padding: 0.5rem 0.85rem;
     display: flex;
     align-items: center;
+    justify-content: space-between;
     flex-shrink: 0;
   }
 
   .view-pill-group {
-    display: inline-flex;
+    display: flex;
     background: #f1f5f9;
+    padding: 0.2rem;
+    border-radius: 6px;
     border: 1px solid #e2e8f0;
-    border-radius: 7px;
-    padding: 2px;
-    gap: 2px;
+    gap: 0.25rem;
+    width: 100%;
   }
 
   .view-pill-btn {
+    flex: 1;
     display: inline-flex;
     align-items: center;
-    gap: 0.35rem;
-    padding: 0.35rem 0.75rem;
+    justify-content: center;
+    gap: 0.4rem;
+    padding: 0.4rem 0.65rem;
     border: none;
+    border-radius: 4px;
     background: transparent;
-    border-radius: 5px;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: #64748b;
+    font-size: 0.82rem;
+    font-weight: 600;
+    color: #475569;
     cursor: pointer;
-    transition: all 0.12s ease-in-out;
+    transition: all 0.15s ease;
   }
 
   .view-pill-btn:hover {
@@ -480,138 +490,157 @@
   .view-pill-btn.active {
     background: #ffffff;
     color: #0284c7;
-    font-weight: 600;
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.06);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
   }
 
   .left-pane-body {
     flex: 1;
     overflow-y: auto;
-    position: relative;
+    display: flex;
+    flex-direction: column;
   }
 
-  /* Right Pane (Live Preview) */
-  .preview-pane {
+  /* Mobile bottom tab bar */
+  .mobile-tab-bar {
+    display: none;
+    background: #1e293b;
+    border-bottom: 1px solid #334155;
+    padding: 0.35rem 0.75rem;
+    gap: 0.4rem;
+  }
+
+  .mobile-tab-btn {
     flex: 1;
-    background: #cbd5e1;
-    min-width: 0;
-    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.35rem;
+    padding: 0.45rem 0.5rem;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #94a3b8;
+    cursor: pointer;
+    transition: all 0.15s;
   }
 
-  /* Responsive Rules: Mobile vs Desktop */
-  @media (max-width: 1024px) {
-    .mobile-tab-bar {
-      display: flex;
-    }
-
-    .left-pane-header {
-      display: none;
-    }
-
-    .pane.mobile-hidden {
-      display: none !important;
-    }
-
-    .pane {
-      flex: 1 !important;
-      width: 100% !important;
-      border: none !important;
-    }
+  .mobile-tab-btn.active {
+    background: #0284c7;
+    color: #ffffff;
   }
 
-  @media (min-width: 1025px) {
-    /* Enforce split view ALWAYS on desktop! */
-    .left-pane {
-      display: flex !important;
-      flex: 1.15 !important;
-    }
-
-    .preview-pane {
-      display: flex !important;
-      flex: 1 !important;
-    }
-  }
-
+  /* Drag & Drop overlay */
   .dropzone-overlay {
-    position: absolute;
+    position: fixed;
     inset: 0;
-    background: rgba(15, 23, 42, 0.6);
+    background: rgba(15, 23, 42, 0.8);
     backdrop-filter: blur(4px);
+    z-index: 1000;
     display: flex;
     align-items: center;
     justify-content: center;
-    z-index: 1000;
     pointer-events: none;
   }
 
   .dropzone-card {
     background: #ffffff;
-    border: 3px dashed #0284c7;
+    padding: 2.5rem 3.5rem;
     border-radius: 12px;
-    padding: 3rem 4rem;
-    text-align: center;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.85rem;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
+    border: 2px dashed #0284c7;
   }
 
-  .dropzone-card h3 {
-    margin: 1rem 0 0.5rem;
+  .dropzone-text {
     font-size: 1.25rem;
+    font-weight: 700;
     color: #0f172a;
   }
 
-  .dropzone-card p {
-    margin: 0;
+  .dropzone-sub {
     font-size: 0.9rem;
     color: #64748b;
   }
 
-  /* True 1:1 scale A4 Landscape print rules */
-  @page {
-    size: 297mm 210mm;
-    margin: 0;
-  }
-
-  @media print {
-    :global(body), :global(html) {
-      margin: 0 !important;
-      padding: 0 !important;
-      width: 297mm !important;
-      height: 210mm !important;
-      background: #ffffff !important;
-      overflow: hidden !important;
-    }
-
-    .no-print {
-      display: none !important;
-    }
-
-    .app-layout {
-      width: 297mm !important;
-      height: 210mm !important;
-      display: block !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
+  /* Responsive Rules */
+  @media (max-width: 1024px) {
+    .mobile-tab-bar {
+      display: flex;
     }
 
     .main-content {
-      width: 297mm !important;
-      height: 210mm !important;
-      display: block !important;
-      position: absolute !important;
-      top: 0 !important;
-      left: 0 !important;
+      flex-direction: column;
     }
 
     .left-pane {
-      display: none !important;
+      border-right: none;
+      flex: 1;
+      width: 100%;
     }
 
     .preview-pane {
-      width: 297mm !important;
-      height: 210mm !important;
+      flex: 1;
+      width: 100%;
+    }
+
+    .mobile-hidden {
+      display: none !important;
+    }
+  }
+
+  /* Desktop restoration rule */
+  @media (min-width: 1025px) {
+    .mobile-tab-bar {
+      display: none !important;
+    }
+
+    .left-pane {
+      display: flex !important;
+      flex: 1.15;
+    }
+
+    .preview-pane {
+      display: flex !important;
+      flex: 1;
+    }
+  }
+
+  @media print {
+    :global(body) {
+      background: white !important;
+      color: black !important;
+      overflow: visible !important;
+      height: auto !important;
+    }
+
+    .app-layout {
       display: block !important;
-      background: transparent !important;
+      height: auto !important;
+      width: auto !important;
+      overflow: visible !important;
+    }
+
+    .main-content {
+      display: block !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .preview-pane {
+      display: block !important;
+      width: 100% !important;
+      height: auto !important;
+      overflow: visible !important;
+    }
+
+    .left-pane,
+    .no-print {
+      display: none !important;
     }
   }
 </style>
