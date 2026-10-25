@@ -18,6 +18,7 @@
     TableauLayoutConfig,
     NumeralFontMode,
     TemplateRenderMode,
+    TemplateOutlineStyle,
   } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
@@ -42,6 +43,7 @@
     leftPaneView?: 'names' | 'settings';
     numeralFontMode?: NumeralFontMode;
     templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     showDimensions?: boolean;
   }
 
@@ -85,6 +87,7 @@
           leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
           numeralFontMode: parsed.numeralFontMode === 'inherit' ? 'inherit' : 'iosevka',
           templateRenderMode: parsed.templateRenderMode === 'cut-strips' ? 'cut-strips' : 'full',
+          templateOutlineStyle: parsed.templateOutlineStyle || 'dashed-subtle',
           showDimensions: typeof parsed.showDimensions === 'boolean' ? parsed.showDimensions : false,
         };
       }
@@ -108,6 +111,7 @@
       leftPaneView: 'names',
       numeralFontMode: 'iosevka',
       templateRenderMode: 'full',
+      templateOutlineStyle: 'dashed-subtle',
       showDimensions: false,
     };
   }
@@ -126,6 +130,7 @@
   let layout: TableauLayoutConfig = $state(initial.layout || getDefaultLayout());
   let numeralFontMode: NumeralFontMode = $state(initial.numeralFontMode || 'iosevka');
   let templateRenderMode: TemplateRenderMode = $state(initial.templateRenderMode || 'full');
+  let templateOutlineStyle: TemplateOutlineStyle = $state(initial.templateOutlineStyle || 'dashed-subtle');
   let showDimensions: boolean = $state(initial.showDimensions || false);
   let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
   let mobileTab: 'names' | 'settings' | 'preview' = $state(
@@ -159,6 +164,7 @@
           leftPaneView,
           numeralFontMode,
           templateRenderMode,
+          templateOutlineStyle,
           showDimensions,
         })
       );
@@ -230,6 +236,7 @@
       bind:showScale
       bind:showDimensions
       bind:templateRenderMode
+      bind:templateOutlineStyle
       bind:badgeStyle
       bind:showCropMarks
       textPaddingLeft={textPaddingLeft}
@@ -371,6 +378,7 @@
             bind:showScale
             bind:showDimensions
             bind:templateRenderMode
+            bind:templateOutlineStyle
             bind:printColumn
             bind:layout
             bind:numeralFontMode
@@ -397,6 +405,7 @@
         {showScale}
         {showDimensions}
         {templateRenderMode}
+        {templateOutlineStyle}
         {badgeStyle}
         {showCropMarks}
         {textPaddingLeft}

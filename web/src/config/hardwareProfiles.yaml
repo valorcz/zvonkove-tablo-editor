@@ -111,6 +111,98 @@ manufacturers:
             startNumber: 1
             printMode: "frame-1to1"
 
+          - id: urmet-sinthesi-s2-8
+            label: "Urmet Sinthesi S2 – 8 bytů (4+4)"
+            description: "2 moduly 1148/14 po 4 tlačítkách, tlačítka vpravo, číslování shora dolů"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: urmet-sinthesi-s2-12
+            label: "Urmet Sinthesi S2 – 12 bytů (4+4+4)"
+            description: "3 moduly 1148/14 po 4 tlačítkách, tlačítka vpravo, číslování shora dolů"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+  - id: siedle
+    name: "Siedle"
+    systems:
+      - id: vario-611
+        name: "Vario 611"
+        slot:
+          widthMm: 63.0
+          heightMm: 19.5
+          cornerRadiusMm: 1.0
+        module:
+          name: "Tlačítkový modul TM 612-4"
+          capacities: [2, 3, 4]
+          slotStepMm: 22.0
+          moduleWidthMm: 82.0
+          button:
+            placement: "right"
+            widthMm: 15.0
+        frame:
+          columnSpacingMm: 6.0
+          pageFitCapacityA4: 3
+        presets:
+          - id: siedle-vario-8
+            label: "Siedle Vario 611 – 8 bytů (4+4)"
+            description: "2 moduly TM 612-4 po 4 tlačítkách, velké štítky 63 × 19,5 mm, tlačítka vpravo"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: siedle-vario-4
+            label: "Siedle Vario 611 – 4 byty (1 sloupec)"
+            description: "1 modul TM 612-4 se 4 tlačítky, velké štítky 63 × 19,5 mm"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+  - id: bticino
+    name: "Bticino"
+    systems:
+      - id: sfera
+        name: "Sfera New / Classic"
+        slot:
+          widthMm: 68.0
+          heightMm: 15.0
+          cornerRadiusMm: 1.5
+        module:
+          name: "Modul 332141 (4 tlačítka)"
+          capacities: [4, 8]
+          slotStepMm: 18.0
+          moduleWidthMm: 88.0
+          button:
+            placement: "right"
+            widthMm: 15.0
+        frame:
+          columnSpacingMm: 6.0
+          pageFitCapacityA4: 3
+        presets:
+          - id: bticino-sfera-8
+            label: "Bticino Sfera – 8 bytů (4+4)"
+            description: "2 moduly po 4 tlačítkách, široké štítky 68 × 15 mm, tlačítka vpravo"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
   - id: custom
     name: "Vlastní rozložení"
     systems:
@@ -122,7 +214,7 @@ manufacturers:
           cornerRadiusMm: 1.0
         module:
           name: "Pás jmenovek"
-          capacities: [5, 8, 10]
+          capacities: [4, 5, 8, 10]
           slotStepMm: 15.88
           moduleWidthMm: 48.6
           button:

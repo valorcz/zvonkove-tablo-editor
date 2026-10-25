@@ -6,6 +6,7 @@
     TableauLayoutConfig,
     NumeralFontMode,
     TemplateRenderMode,
+    TemplateOutlineStyle,
   } from '../lib/types';
   import {
     FONT_OPTIONS,
@@ -36,6 +37,7 @@
     showScale = $bindable(true),
     showDimensions = $bindable(false),
     templateRenderMode = $bindable('full'),
+    templateOutlineStyle = $bindable('dashed-subtle'),
     printColumn = $bindable('all'),
     layout = $bindable(getDefaultLayout()),
     numeralFontMode = $bindable('iosevka'),
@@ -52,6 +54,7 @@
     showScale: boolean;
     showDimensions?: boolean;
     templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     printColumn?: PrintColumnOption;
     layout?: TableauLayoutConfig;
     numeralFontMode?: NumeralFontMode;
@@ -77,6 +80,7 @@
         showScale,
         showDimensions,
         templateRenderMode,
+        templateOutlineStyle,
         printColumn,
         numeralFontMode,
       },
@@ -99,6 +103,7 @@
       if (typeof s.showScale === 'boolean') showScale = s.showScale;
       if (typeof s.showDimensions === 'boolean') showDimensions = s.showDimensions;
       if (s.templateRenderMode) templateRenderMode = s.templateRenderMode;
+      if (s.templateOutlineStyle) templateOutlineStyle = s.templateOutlineStyle;
       if (s.printColumn !== undefined) printColumn = s.printColumn;
       if (s.numeralFontMode) numeralFontMode = s.numeralFontMode;
     }
@@ -130,6 +135,9 @@
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT;
     showCropMarks = true;
     showScale = true;
+    showDimensions = false;
+    templateRenderMode = 'full';
+    templateOutlineStyle = 'dashed-subtle';
     printColumn = 'all';
     layout = getDefaultLayout();
     numeralFontMode = 'iosevka';
@@ -165,6 +173,7 @@
       bind:showScale
       bind:showDimensions
       bind:templateRenderMode
+      bind:templateOutlineStyle
       bind:printColumn
       columns={layout.columns}
     />

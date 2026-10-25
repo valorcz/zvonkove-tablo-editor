@@ -8,6 +8,7 @@
     TableauLayoutConfig,
     NumeralFontMode,
     TemplateRenderMode,
+    TemplateOutlineStyle,
   } from '../lib/types';
   import { getHardwareProfileForPreset } from '../lib/hardwareProfiles';
   import { decodeBadgeStyle, buildBadgeGeometry } from '../lib/badgeRegistry';
@@ -36,6 +37,7 @@
     showScale = true,
     showDimensions = false,
     templateRenderMode = 'full',
+    templateOutlineStyle = 'dashed-subtle',
     badgeStyle = 'classic',
     showCropMarks = true,
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
@@ -51,6 +53,7 @@
     showScale?: boolean;
     showDimensions?: boolean;
     templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
@@ -172,10 +175,23 @@
       })
   );
 
-  // Corner crop marks for columns
+  const outlineAttrs = $derived.by(() => {
+    switch (templateOutlineStyle) {
+      case 'dashed-subtle':
+        return { stroke: '#94a3b8', strokeWidth: 1.0, strokeDasharray: '4,3', opacity: 0.8 };
+      case 'solid-light':
+        return { stroke: '#cbd5e1', strokeWidth: 1.0, strokeDasharray: 'none', opacity: 1.0 };
+      case 'solid-dark':
+        return { stroke: '#000000', strokeWidth: 1.5, strokeDasharray: 'none', opacity: 1.0 };
+      case 'none':
+        return null;
+    }
+  });
+
+  // Corner crop marks for the full module strip (to slice whole strip with cutter)
   const colCropMarks = $derived.by(() => {
     if (!showCropMarks) return [];
-    const markLen = 22.0;
+    const markLen = 24.0;
     const markGap = 5.0;
 
     const list: { x1: number; y1: number; x2: number; y2: number }[] = [];
@@ -183,23 +199,32 @@
       if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
       const colCfg = layout.columns[cIdx];
       const colX = colOrigins[cIdx];
-      const sLeft = buttonPlacement === 'left' ? colX + buttonWidthPx : colX;
-      const sRight = sLeft + slotWidthPx;
-      const sTop = OFFSET_Y + IMAGE_SLOT_TOP_0 * SCALE_Y;
-      const sBot = sTop + (colCfg.capacity - 1) * slotStepPx + slotHeightPx;
+      const stripWidthPx = buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx;
+      const stripLeft = colX;
+      const stripRight = colX + stripWidthPx;
+      const stripTop = OFFSET_Y;
+      const stripBottom = OFFSET_Y + (IMAGE_SLOT_TOP_0 * 2 * SCALE_Y) + (colCfg.capacity * slotStepPx);
 
+      // 4 Corner marks defining the entire module paper strip
       // Top-left
-      list.push({ x1: sLeft, y1: sTop - markGap - markLen, x2: sLeft, y2: sTop - markGap });
-      list.push({ x1: sLeft - markGap - markLen, y1: sTop, x2: sLeft - markGap, y2: sTop });
+      list.push({ x1: stripLeft, y1: stripTop - markGap - markLen, x2: stripLeft, y2: stripTop - markGap });
+      list.push({ x1: stripLeft - markGap - markLen, y1: stripTop, x2: stripLeft - markGap, y2: stripTop });
       // Top-right
-      list.push({ x1: sRight, y1: sTop - markGap - markLen, x2: sRight, y2: sTop - markGap });
-      list.push({ x1: sRight + markGap, y1: sTop, x2: sRight + markGap + markLen, y2: sTop });
+      list.push({ x1: stripRight, y1: stripTop - markGap - markLen, x2: stripRight, y2: stripTop - markGap });
+      list.push({ x1: stripRight + markGap, y1: stripTop, x2: stripRight + markGap + markLen, y2: stripTop });
       // Bottom-left
-      list.push({ x1: sLeft, y1: sBot + markGap, x2: sLeft, y2: sBot + markGap + markLen });
-      list.push({ x1: sLeft - markGap - markLen, y1: sBot, x2: sLeft - markGap, y2: sBot });
+      list.push({ x1: stripLeft, y1: stripBottom + markGap, x2: stripLeft, y2: stripBottom + markGap + markLen });
+      list.push({ x1: stripLeft - markGap - markLen, y1: stripBottom, x2: stripLeft - markGap, y2: stripBottom });
       // Bottom-right
-      list.push({ x1: sRight, y1: sBot + markGap, x2: sRight, y2: sBot + markGap + markLen });
-      list.push({ x1: sRight + markGap, y1: sBot, x2: sRight + markGap + markLen, y2: sBot });
+      list.push({ x1: stripRight, y1: stripBottom + markGap, x2: stripRight, y2: stripBottom + markGap + markLen });
+      list.push({ x1: stripRight + markGap, y1: stripBottom, x2: stripRight + markGap + markLen, y2: stripBottom });
+
+      // Intermediate divider ticks between slots on the strip borders
+      for (let r = 1; r < colCfg.capacity; r++) {
+        const dividerY = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y) + r * slotStepPx - (slotStepPx - slotHeightPx) / 2;
+        list.push({ x1: stripLeft - markGap - 9, y1: dividerY, x2: stripLeft - markGap, y2: dividerY });
+        list.push({ x1: stripRight + markGap, y1: dividerY, x2: stripRight + markGap + 9, y2: dividerY });
+      }
     }
     return list;
   });
@@ -421,8 +446,9 @@
                   width={buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx}
                   height={colHeightPx}
                   fill="none"
-                  stroke="#000000"
-                  stroke-width="1.8"
+                  stroke={templateOutlineStyle === 'solid-dark' ? '#000000' : '#475569'}
+                  stroke-width={templateOutlineStyle === 'solid-dark' ? 1.8 : 1.2}
+                  stroke-dasharray={templateOutlineStyle === 'dashed-subtle' ? '6,4' : 'none'}
                   rx="3"
                 />
               {/if}
@@ -433,16 +459,20 @@
                 {@const slotLeft = buttonPlacement === 'left' ? cOriginX + buttonWidthPx : cOriginX}
 
                 <!-- Slot cutout rectangle -->
-                <rect
-                  x={slotLeft}
-                  y={slotTop}
-                  width={slotWidthPx}
-                  height={slotHeightPx}
-                  fill="none"
-                  stroke="#000000"
-                  stroke-width="1.5"
-                  rx={cornerRadiusPx}
-                />
+                {#if outlineAttrs}
+                  <rect
+                    x={slotLeft}
+                    y={slotTop}
+                    width={slotWidthPx}
+                    height={slotHeightPx}
+                    fill="none"
+                    stroke={outlineAttrs.stroke}
+                    stroke-width={outlineAttrs.strokeWidth}
+                    stroke-dasharray={outlineAttrs.strokeDasharray}
+                    opacity={outlineAttrs.opacity}
+                    rx={cornerRadiusPx}
+                  />
+                {/if}
 
                 {#if templateRenderMode === 'full' && buttonPlacement !== 'none'}
                   {@const btnX = buttonPlacement === 'left' ? cOriginX + 12 : cOriginX + slotWidthPx + 12}

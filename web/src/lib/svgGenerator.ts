@@ -5,6 +5,7 @@ import type {
   TableauLayoutConfig,
   NumeralFontMode,
   TemplateRenderMode,
+  TemplateOutlineStyle,
 } from './types';
 import { getHardwareProfileForPreset } from './hardwareProfiles';
 import { decodeBadgeStyle, buildBadgeGeometry } from './badgeRegistry';
@@ -57,6 +58,7 @@ export function generateFullSVG(
   layout?: TableauLayoutConfig,
   numeralFontMode: NumeralFontMode = 'iosevka',
   templateRenderMode: TemplateRenderMode = 'full',
+  templateOutlineStyle: TemplateOutlineStyle = 'dashed-subtle',
   showDimensions = false
 ): string {
   const activeLayout = layout || getDefaultLayout();
@@ -170,14 +172,36 @@ export function generateFullSVG(
     colTemplatesXml += `    <g id="column-template-${cIdx + 1}">\n`;
     if (templateRenderMode === 'full') {
       const outerW = buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx;
-      colTemplatesXml += `        <rect x="${cOriginX.toFixed(2)}" y="${OFFSET_Y.toFixed(2)}" width="${outerW.toFixed(2)}" height="${colHeightPx.toFixed(2)}" fill="none" stroke="#000000" stroke-width="1.8" rx="3"/>\n`;
+      const strokeColor = templateOutlineStyle === 'solid-dark' ? '#000000' : '#475569';
+      const strokeW = templateOutlineStyle === 'solid-dark' ? '1.8' : '1.2';
+      const dashAttr = templateOutlineStyle === 'dashed-subtle' ? ' stroke-dasharray="6,4"' : '';
+      colTemplatesXml += `        <rect x="${cOriginX.toFixed(2)}" y="${OFFSET_Y.toFixed(2)}" width="${outerW.toFixed(2)}" height="${colHeightPx.toFixed(2)}" fill="none" stroke="${strokeColor}" stroke-width="${strokeW}"${dashAttr} rx="3"/>\n`;
+    }
+
+    let slotStroke = '#94a3b8';
+    let slotStrokeW = '1.0';
+    let slotDash = ' stroke-dasharray="4,3" opacity="0.8"';
+    let renderSlotOutline = true;
+
+    if (templateOutlineStyle === 'solid-light') {
+      slotStroke = '#cbd5e1';
+      slotStrokeW = '1.0';
+      slotDash = '';
+    } else if (templateOutlineStyle === 'solid-dark') {
+      slotStroke = '#000000';
+      slotStrokeW = '1.5';
+      slotDash = '';
+    } else if (templateOutlineStyle === 'none') {
+      renderSlotOutline = false;
     }
 
     for (let r = 0; r < colCfg.capacity; r++) {
       const slotTop = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y) + r * slotStepPx;
       const slotLeft = buttonPlacement === 'left' ? cOriginX + buttonWidthPx : cOriginX;
 
-      colTemplatesXml += `        <rect x="${slotLeft.toFixed(2)}" y="${slotTop.toFixed(2)}" width="${slotWidthPx.toFixed(2)}" height="${slotHeightPx.toFixed(2)}" fill="none" stroke="#000000" stroke-width="1.5" rx="${cornerRadiusPx.toFixed(2)}"/>\n`;
+      if (renderSlotOutline) {
+        colTemplatesXml += `        <rect x="${slotLeft.toFixed(2)}" y="${slotTop.toFixed(2)}" width="${slotWidthPx.toFixed(2)}" height="${slotHeightPx.toFixed(2)}" fill="none" stroke="${slotStroke}" stroke-width="${slotStrokeW}"${slotDash} rx="${cornerRadiusPx.toFixed(2)}"/>\n`;
+      }
 
       if (templateRenderMode === 'full' && buttonPlacement !== 'none') {
         const btnX = buttonPlacement === 'left' ? cOriginX + 12 : cOriginX + slotWidthPx + 12;
@@ -189,10 +213,10 @@ export function generateFullSVG(
     colTemplatesXml += `    </g>\n`;
   }
 
-  // Corner crop marks for precise cutting
+  // Corner crop marks for the full module strip (to slice whole strip with cutter)
   let cropMarksXml = '';
   if (showCropMarks) {
-    const markLen = 22.0;
+    const markLen = 24.0;
     const markGap = 5.0;
 
     let marks = '';
@@ -200,23 +224,32 @@ export function generateFullSVG(
       if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
       const colCfg = activeLayout.columns[cIdx];
       const colX = colOrigins[cIdx];
-      const sLeft = buttonPlacement === 'left' ? colX + buttonWidthPx : colX;
-      const sRight = sLeft + slotWidthPx;
-      const sTop = OFFSET_Y + IMAGE_SLOT_TOP_0 * SCALE_Y;
-      const sBot = sTop + (colCfg.capacity - 1) * slotStepPx + slotHeightPx;
+      const stripWidthPx = buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx;
+      const stripLeft = colX;
+      const stripRight = colX + stripWidthPx;
+      const stripTop = OFFSET_Y;
+      const stripBottom = OFFSET_Y + (IMAGE_SLOT_TOP_0 * 2 * SCALE_Y) + (colCfg.capacity * slotStepPx);
 
+      // 4 Corner marks defining the entire module paper strip
       // Top-left
-      marks += `        <line x1="${sLeft.toFixed(2)}" y1="${(sTop - markGap - markLen).toFixed(2)}" x2="${sLeft.toFixed(2)}" y2="${(sTop - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
-      marks += `        <line x1="${(sLeft - markGap - markLen).toFixed(2)}" y1="${sTop.toFixed(2)}" x2="${(sLeft - markGap).toFixed(2)}" y2="${sTop.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${stripLeft.toFixed(2)}" y1="${(stripTop - markGap - markLen).toFixed(2)}" x2="${stripLeft.toFixed(2)}" y2="${(stripTop - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(stripLeft - markGap - markLen).toFixed(2)}" y1="${stripTop.toFixed(2)}" x2="${(stripLeft - markGap).toFixed(2)}" y2="${stripTop.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
       // Top-right
-      marks += `        <line x1="${sRight.toFixed(2)}" y1="${(sTop - markGap - markLen).toFixed(2)}" x2="${sRight.toFixed(2)}" y2="${(sTop - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
-      marks += `        <line x1="${(sRight + markGap).toFixed(2)}" y1="${sTop.toFixed(2)}" x2="${(sRight + markGap + markLen).toFixed(2)}" y2="${sTop.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${stripRight.toFixed(2)}" y1="${(stripTop - markGap - markLen).toFixed(2)}" x2="${stripRight.toFixed(2)}" y2="${(stripTop - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(stripRight + markGap).toFixed(2)}" y1="${stripTop.toFixed(2)}" x2="${(stripRight + markGap + markLen).toFixed(2)}" y2="${stripTop.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
       // Bottom-left
-      marks += `        <line x1="${sLeft.toFixed(2)}" y1="${(sBot + markGap).toFixed(2)}" x2="${sLeft.toFixed(2)}" y2="${(sBot + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
-      marks += `        <line x1="${(sLeft - markGap - markLen).toFixed(2)}" y1="${sBot.toFixed(2)}" x2="${(sLeft - markGap).toFixed(2)}" y2="${sBot.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${stripLeft.toFixed(2)}" y1="${(stripBottom + markGap).toFixed(2)}" x2="${stripLeft.toFixed(2)}" y2="${(stripBottom + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(stripLeft - markGap - markLen).toFixed(2)}" y1="${stripBottom.toFixed(2)}" x2="${(stripLeft - markGap).toFixed(2)}" y2="${stripBottom.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
       // Bottom-right
-      marks += `        <line x1="${sRight.toFixed(2)}" y1="${(sBot + markGap).toFixed(2)}" x2="${sRight.toFixed(2)}" y2="${(sBot + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
-      marks += `        <line x1="${(sRight + markGap).toFixed(2)}" y1="${sBot.toFixed(2)}" x2="${(sRight + markGap + markLen).toFixed(2)}" y2="${sBot.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${stripRight.toFixed(2)}" y1="${(stripBottom + markGap).toFixed(2)}" x2="${stripRight.toFixed(2)}" y2="${(stripBottom + markGap + markLen).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      marks += `        <line x1="${(stripRight + markGap).toFixed(2)}" y1="${stripBottom.toFixed(2)}" x2="${(stripRight + markGap + markLen).toFixed(2)}" y2="${stripBottom.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+
+      // Intermediate divider ticks between slots on the strip borders
+      for (let r = 1; r < colCfg.capacity; r++) {
+        const dividerY = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y) + r * slotStepPx - (slotStepPx - slotHeightPx) / 2;
+        marks += `        <line x1="${(stripLeft - markGap - 9).toFixed(2)}" y1="${dividerY.toFixed(2)}" x2="${(stripLeft - markGap).toFixed(2)}" y2="${dividerY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+        marks += `        <line x1="${(stripRight + markGap).toFixed(2)}" y1="${dividerY.toFixed(2)}" x2="${(stripRight + markGap + 9).toFixed(2)}" y2="${dividerY.toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
+      }
     }
 
     cropMarksXml = `    <g id="Ořezové-značky">\n${marks}    </g>\n`;

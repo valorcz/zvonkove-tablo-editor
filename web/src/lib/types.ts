@@ -14,6 +14,8 @@ export type PrintLayoutMode = 'frame-1to1' | 'compact-strips';
 
 export type TemplateRenderMode = 'full' | 'cut-strips';
 
+export type TemplateOutlineStyle = 'dashed-subtle' | 'solid-light' | 'solid-dark' | 'none';
+
 export interface ColumnConfig {
   id: number;
   capacity: number;   // total button positions of module (typically 10 or 5)
@@ -30,6 +32,7 @@ export interface PresetDefinition {
   startNumber: number;
   printMode: PrintLayoutMode;
   templateRenderMode?: TemplateRenderMode;
+  templateOutlineStyle?: TemplateOutlineStyle;
   showDimensions?: boolean;
 }
 
@@ -40,6 +43,7 @@ export interface TableauLayoutConfig {
   startNumber: number;
   printMode: PrintLayoutMode;
   templateRenderMode?: TemplateRenderMode;
+  templateOutlineStyle?: TemplateOutlineStyle;
   showDimensions?: boolean;
 }
 

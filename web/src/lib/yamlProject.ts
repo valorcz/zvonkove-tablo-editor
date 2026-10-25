@@ -6,6 +6,7 @@ import type {
   TableauLayoutConfig,
   ColumnConfig,
   TemplateRenderMode,
+  TemplateOutlineStyle,
 } from './types';
 import { getDefaultLayout } from './tableauConfig';
 
@@ -20,6 +21,7 @@ export interface TableauAppSettings {
   showScale: boolean;
   showDimensions?: boolean;
   templateRenderMode?: TemplateRenderMode;
+  templateOutlineStyle?: TemplateOutlineStyle;
   printColumn?: PrintColumnOption;
   numeralFontMode?: NumeralFontMode;
 }
@@ -87,6 +89,8 @@ export function serializeProjectYAML(
   lines.push(`  showDimensions: ${settings.showDimensions ?? false}`);
   lines.push(`  # Režim šablony: full (kompletní modul s tlačítky) | cut-strips (čisté pásy k ořezu)`);
   lines.push(`  templateRenderMode: ${settings.templateRenderMode || 'full'}`);
+  lines.push(`  # Styl obrysů štítků v šabloně: dashed-subtle | solid-light | solid-dark | none`);
+  lines.push(`  templateOutlineStyle: ${settings.templateOutlineStyle || 'dashed-subtle'}`);
   lines.push(`  # Rozsah tisku: all = všechny sloupce, 1 = sloupec 1, 2 = sloupec 2...`);
   lines.push(`  printColumn: ${settings.printColumn ?? 'all'}`);
 
@@ -127,6 +131,7 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
         showScale: parsed.showScale ?? parsed.settings?.showScale,
         showDimensions: parsed.showDimensions ?? parsed.settings?.showDimensions,
         templateRenderMode: parsed.templateRenderMode || parsed.settings?.templateRenderMode || 'full',
+        templateOutlineStyle: parsed.templateOutlineStyle || parsed.settings?.templateOutlineStyle || 'dashed-subtle',
         printColumn: parsed.printColumn || parsed.settings?.printColumn,
         numeralFontMode: parsed.numeralFontMode || parsed.settings?.numeralFontMode || 'iosevka',
       };

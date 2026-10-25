@@ -1,6 +1,6 @@
 <script lang="ts">
   import BatchImportModal from './BatchImportModal.svelte';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode, TemplateRenderMode } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode, TemplateRenderMode, TemplateOutlineStyle } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
   import {
@@ -20,6 +20,7 @@
     showScale = $bindable(),
     showDimensions = $bindable(false),
     templateRenderMode = $bindable('full'),
+    templateOutlineStyle = $bindable('dashed-subtle'),
     badgeStyle = $bindable('classic'),
     showCropMarks = $bindable(true),
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
@@ -37,6 +38,7 @@
     showScale: boolean;
     showDimensions?: boolean;
     templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
@@ -90,6 +92,7 @@
       layout,
       numeralFontMode,
       templateRenderMode,
+      templateOutlineStyle,
       showDimensions
     );
     const date = new Date().toISOString().slice(0, 10);

@@ -1,11 +1,17 @@
 <script lang="ts">
-  import type { PrintColumnOption, ColumnConfig, TemplateRenderMode } from '../../lib/types';
+  import type {
+    PrintColumnOption,
+    ColumnConfig,
+    TemplateRenderMode,
+    TemplateOutlineStyle,
+  } from '../../lib/types';
 
   let {
     showCropMarks = $bindable(true),
     showScale = $bindable(true),
     showDimensions = $bindable(false),
     templateRenderMode = $bindable('full'),
+    templateOutlineStyle = $bindable('dashed-subtle'),
     printColumn = $bindable('all'),
     columns = [],
   }: {
@@ -13,6 +19,7 @@
     showScale: boolean;
     showDimensions?: boolean;
     templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     printColumn?: PrintColumnOption;
     columns: ColumnConfig[];
   } = $props();
@@ -23,7 +30,7 @@
   <div class="checkbox-stack">
     <label class="custom-checkbox">
       <input type="checkbox" bind:checked={showCropMarks} />
-      <span>Ořezové značky (rohové linky pro přesné řezání pravítkem)</span>
+      <span>Ořezové značky na rozích modulů (pro přesné řezání celých pásů)</span>
     </label>
     <label class="custom-checkbox">
       <input type="checkbox" bind:checked={showScale} />
@@ -57,6 +64,47 @@
     </div>
     <p class="field-hint">
       Režim čistých pásů netiskne tělo panelu ani tlačítka, což šetří toner a zanechává pouze čisté rámečky pro přesné vyřezání papírových pásků.
+    </p>
+  </div>
+
+  <div class="form-field" style="margin-top: 14px;">
+    <span class="field-label">Styl pomocných linek štítků:</span>
+    <div class="segmented-control outline-segmented">
+      <button
+        type="button"
+        class="seg-btn"
+        class:active={templateOutlineStyle === 'dashed-subtle'}
+        onclick={() => (templateOutlineStyle = 'dashed-subtle')}
+      >
+        Jemné čárkování
+      </button>
+      <button
+        type="button"
+        class="seg-btn"
+        class:active={templateOutlineStyle === 'solid-light'}
+        onclick={() => (templateOutlineStyle = 'solid-light')}
+      >
+        Světlá linka
+      </button>
+      <button
+        type="button"
+        class="seg-btn"
+        class:active={templateOutlineStyle === 'solid-dark'}
+        onclick={() => (templateOutlineStyle = 'solid-dark')}
+      >
+        Černý obrys
+      </button>
+      <button
+        type="button"
+        class="seg-btn"
+        class:active={templateOutlineStyle === 'none'}
+        onclick={() => (templateOutlineStyle = 'none')}
+      >
+        Bez linek
+      </button>
+    </div>
+    <p class="field-hint">
+      Jemné čárkování poskytuje precizní vodítko pro nůžky či řezačku, ale po zasunutí pásu za plexisklo tabla zůstává téměř neviditelné.
     </p>
   </div>
 
@@ -155,10 +203,11 @@
     gap: 2px;
   }
 
-  .mode-segmented .seg-btn {
+  .mode-segmented .seg-btn,
+  .outline-segmented .seg-btn {
     flex: 1;
-    padding: 0.4rem 0.5rem;
-    font-size: 0.75rem;
+    padding: 0.4rem 0.45rem;
+    font-size: 0.74rem;
     font-weight: 600;
     background: transparent;
     border: none;
@@ -167,13 +216,16 @@
     cursor: pointer;
     transition: all 0.15s ease;
     text-align: center;
+    white-space: nowrap;
   }
 
-  .mode-segmented .seg-btn:hover {
+  .mode-segmented .seg-btn:hover,
+  .outline-segmented .seg-btn:hover {
     color: #0f172a;
   }
 
-  .mode-segmented .seg-btn.active {
+  .mode-segmented .seg-btn.active,
+  .outline-segmented .seg-btn.active {
     background: #ffffff;
     color: #0284c7;
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
