@@ -1,5 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
+  import ZoomToolbar from './ZoomToolbar.svelte';
   import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from '../lib/types';
   import {
     SVG_VIEWBOX,
@@ -284,6 +285,14 @@
   let zoomLevel: number = $state(1.0);
   let activeFocus: string = $state('all');
   let viewportEl: HTMLDivElement | null = $state(null);
+  let canvasBoxEl: HTMLDivElement | null = $state(null);
+
+  // --- Pan / Drag by Mouse & Touch ---
+  let isPanning: boolean = $state(false);
+  let panStartX = 0;
+  let panStartY = 0;
+  let startScrollLeft = 0;
+  let startScrollTop = 0;
 
   function resetZoom() {
     zoomLevel = 1.0;
@@ -313,21 +322,39 @@
     zoomLevel = 2.6;
     await tick();
 
-    requestAnimationFrame(() => {
-      if (!viewportEl) return;
-      const scrollW = viewportEl.scrollWidth;
+    setTimeout(() => {
+      if (!viewportEl || !canvasBoxEl) return;
+      const canvasW = canvasBoxEl.getBoundingClientRect().width;
       const viewW = viewportEl.clientWidth;
 
-      const colCenterX = colOrigins[cIdx] + (621.0 * 1.17229) / 2.0;
+      const colOriginsList = computeColumnOrigins(layout);
+      const colOrigin = colOriginsList[cIdx] ?? 275.151;
+      const colWidth = 621.0 * 1.17229;
+      const colCenterX = colOrigin + colWidth / 2.0;
       const targetRatio = colCenterX / 3508.0;
 
-      const targetX = targetRatio * scrollW - viewW / 2;
+      const pixelX = targetRatio * canvasW;
+      const targetX = Math.max(0, pixelX - viewW / 2.0);
+
+      const canvasH = canvasBoxEl.getBoundingClientRect().height;
+      const viewH = viewportEl.clientHeight;
+      const pixelY = (1154.0 / 2481.0) * canvasH;
+      const targetY = Math.max(0, pixelY - viewH / 2.0);
+
       viewportEl.scrollTo({
-        left: Math.max(0, targetX),
-        top: 0,
+        left: targetX,
+        top: targetY,
         behavior: 'smooth',
       });
-    });
+
+      // Quick fallback check: if smooth scroll didn't move immediately
+      setTimeout(() => {
+        if (viewportEl && Math.abs(viewportEl.scrollLeft - targetX) > 5) {
+          viewportEl.scrollLeft = targetX;
+          viewportEl.scrollTop = targetY;
+        }
+      }, 150);
+    }, 40);
   }
 
   function handleWheel(e: WheelEvent) {
@@ -340,73 +367,69 @@
       }
     }
   }
+
+  function handlePointerDown(e: PointerEvent) {
+    if (e.button !== 0 || !viewportEl) return;
+    if ((e.target as HTMLElement).closest('.no-print')) return;
+
+    isPanning = true;
+    panStartX = e.clientX;
+    panStartY = e.clientY;
+    startScrollLeft = viewportEl.scrollLeft;
+    startScrollTop = viewportEl.scrollTop;
+    try {
+      viewportEl.setPointerCapture(e.pointerId);
+    } catch {}
+  }
+
+  function handlePointerMove(e: PointerEvent) {
+    if (!isPanning || !viewportEl) return;
+    const dx = e.clientX - panStartX;
+    const dy = e.clientY - panStartY;
+    viewportEl.scrollLeft = startScrollLeft - dx;
+    viewportEl.scrollTop = startScrollTop - dy;
+  }
+
+  function handlePointerUp(e: PointerEvent) {
+    if (!isPanning || !viewportEl) return;
+    isPanning = false;
+    try {
+      viewportEl.releasePointerCapture(e.pointerId);
+    } catch {}
+  }
+
+  function handlePointerCancel(e: PointerEvent) {
+    handlePointerUp(e);
+  }
 </script>
 
 <div class="preview-wrapper">
   <!-- Floating Zoom & Column Widget (Hidden in print) -->
-  <div class="zoom-toolbar no-print">
-    <!-- Quick Column Focus -->
-    <div class="column-group">
-      <button
-        class="focus-btn"
-        class:active={activeFocus === 'all' && zoomLevel === 1.0}
-        onclick={() => focusColumn('all')}
-        title="Celý náhled tabla (A4)"
-      >
-        Vše
-      </button>
-      {#each layout.columns as _, cIdx}
-        <button
-          class="focus-btn"
-          class:active={activeFocus === `col${cIdx + 1}`}
-          onclick={() => focusColumn(`col${cIdx + 1}`, cIdx)}
-          title="Přiblížit Sloupec {cIdx + 1}"
-        >
-          Sl. {cIdx + 1}
-        </button>
-      {/each}
-    </div>
+  <ZoomToolbar
+    columns={layout.columns}
+    {zoomLevel}
+    {activeFocus}
+    onFocusColumn={focusColumn}
+    onZoomIn={zoomIn}
+    onZoomOut={zoomOut}
+    onResetZoom={resetZoom}
+  />
 
-    <!-- Zoom In / Out / Reset Controls -->
-    <div class="zoom-stepper">
-      <button
-        type="button"
-        class="step-btn"
-        onclick={zoomOut}
-        disabled={zoomLevel <= 0.5}
-        title="Oddálit (−)"
-      >
-        −
-      </button>
-      <button
-        type="button"
-        class="pct-btn"
-        onclick={resetZoom}
-        title="Kliknutím obnovíte zobrazení celé stránky (100% / Fit)"
-      >
-        {Math.round(zoomLevel * 100)}%
-      </button>
-      <button
-        type="button"
-        class="step-btn"
-        onclick={zoomIn}
-        disabled={zoomLevel >= 4.0}
-        title="Přiblížit (+)"
-      >
-        +
-      </button>
-    </div>
-  </div>
-
-  <!-- Scrollable Viewport -->
+  <!-- Scrollable Viewport with Pan / Drag -->
   <!-- svelte-ignore a11y_no_static_element_interactions -->
   <div
     class="svg-scroll-viewport"
+    class:is-panning={isPanning}
     bind:this={viewportEl}
     onwheel={handleWheel}
+    onpointerdown={handlePointerDown}
+    onpointermove={handlePointerMove}
+    onpointerup={handlePointerUp}
+    onpointercancel={handlePointerCancel}
   >
     <div
       class="svg-canvas-box"
+      bind:this={canvasBoxEl}
       style="width: {zoomLevel === 1.0 ? '100%' : `${zoomLevel * 100}%`};"
     >
       <svg
@@ -628,129 +651,41 @@
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    background: #0f172a;
-  }
-
-  .zoom-toolbar {
-    position: absolute;
-    top: 1rem;
-    right: 1.25rem;
-    z-index: 40;
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    background: rgba(15, 23, 42, 0.88);
-    backdrop-filter: blur(8px);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    padding: 0.35rem 0.5rem;
-    border-radius: 9999px;
-    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.35);
-  }
-
-  .column-group {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    border-right: 1px solid rgba(255, 255, 255, 0.15);
-    padding-right: 0.4rem;
-  }
-
-  .focus-btn {
-    background: transparent;
-    border: none;
-    color: #94a3b8;
-    font-size: 0.72rem;
-    font-weight: 600;
-    padding: 0.22rem 0.5rem;
-    border-radius: 9999px;
-    cursor: pointer;
-    transition: all 0.15s ease;
-    white-space: nowrap;
-  }
-
-  .focus-btn:hover {
-    color: #f8fafc;
-    background: rgba(255, 255, 255, 0.1);
-  }
-
-  .focus-btn.active {
-    background: #0284c7;
-    color: #ffffff;
-  }
-
-  .zoom-stepper {
-    display: flex;
-    align-items: center;
-    gap: 0.15rem;
-  }
-
-  .step-btn {
-    background: transparent;
-    border: none;
-    color: #cbd5e1;
-    width: 24px;
-    height: 24px;
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 0.95rem;
-    font-weight: bold;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .step-btn:hover:not(:disabled) {
-    background: rgba(255, 255, 255, 0.15);
-    color: #ffffff;
-  }
-
-  .step-btn:disabled {
-    opacity: 0.35;
-    cursor: not-allowed;
-  }
-
-  .pct-btn {
-    background: transparent;
-    border: none;
-    color: #38bdf8;
-    font-size: 0.75rem;
-    font-weight: 700;
-    min-width: 44px;
-    text-align: center;
-    padding: 0.2rem 0.3rem;
-    border-radius: 4px;
-    cursor: pointer;
-    transition: background 0.15s;
-  }
-
-  .pct-btn:hover {
-    background: rgba(56, 189, 248, 0.15);
+    background: #cbd5e1;
   }
 
   .svg-scroll-viewport {
     flex: 1;
+    width: 100%;
+    height: 100%;
     overflow: auto;
     display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 1.5rem;
+    align-items: flex-start;
+    padding: 3.5rem 1.5rem 1.5rem 1.5rem;
+    box-sizing: border-box;
     cursor: grab;
+    user-select: none;
+    touch-action: none;
+  }
+
+  .svg-scroll-viewport.is-panning {
+    cursor: grabbing;
   }
 
   .svg-canvas-box {
+    margin: auto;
     flex-shrink: 0;
-    aspect-ratio: 3508 / 2481;
-    background: #ffffff;
-    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
-    border-radius: 4px;
-    transition: width 0.15s ease-out;
+    max-width: none;
   }
 
   svg {
     display: block;
     width: 100%;
-    height: 100%;
+    height: auto;
+    aspect-ratio: 3508 / 2481;
+    background: #ffffff;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.16);
+    border-radius: 4px;
   }
 
   @media print {
@@ -772,9 +707,6 @@
       box-shadow: none !important;
       border-radius: 0 !important;
       aspect-ratio: auto !important;
-    }
-    .no-print {
-      display: none !important;
     }
   }
 </style>
