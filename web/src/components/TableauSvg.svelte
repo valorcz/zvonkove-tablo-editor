@@ -831,21 +831,53 @@
     .preview-wrapper {
       background: transparent !important;
       position: static !important;
-      overflow: visible !important;
-      width: 100% !important;
-      height: 100% !important;
+      overflow: hidden !important;
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
     }
     .svg-scroll-viewport {
-      overflow: visible !important;
+      overflow: hidden !important;
       padding: 0 !important;
+      margin: 0 !important;
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
       display: block !important;
+      border: none !important;
     }
     .svg-canvas-box {
-      width: 100% !important;
-      max-width: 100% !important;
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
       box-shadow: none !important;
+      border: none !important;
       border-radius: 0 !important;
+      transform: none !important;
       aspect-ratio: auto !important;
+    }
+    svg {
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
+      box-shadow: none !important;
+      border: none !important;
+      border-radius: 0 !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      display: block !important;
+      background: #ffffff !important;
+      break-inside: avoid !important;
+      page-break-inside: avoid !important;
     }
   }
 </style>

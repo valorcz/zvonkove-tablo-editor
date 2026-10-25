@@ -654,32 +654,60 @@
     :global(body) {
       background: white !important;
       color: black !important;
-      overflow: visible !important;
-      height: auto !important;
+      overflow: hidden !important;
+      height: 210mm !important;
+      max-height: 210mm !important;
+      width: 297mm !important;
+      max-width: 297mm !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      -webkit-print-color-adjust: exact !important;
+      print-color-adjust: exact !important;
     }
 
     .app-layout {
       display: block !important;
-      height: auto !important;
-      width: auto !important;
-      overflow: visible !important;
+      height: 210mm !important;
+      width: 297mm !important;
+      max-height: 210mm !important;
+      max-width: 297mm !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
     }
 
     .main-content {
       display: block !important;
-      height: auto !important;
-      overflow: visible !important;
+      height: 210mm !important;
+      width: 297mm !important;
+      max-height: 210mm !important;
+      max-width: 297mm !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
     }
 
     .preview-pane {
       display: block !important;
-      width: 100% !important;
-      height: auto !important;
-      overflow: visible !important;
+      width: 297mm !important;
+      height: 210mm !important;
+      max-width: 297mm !important;
+      max-height: 210mm !important;
+      overflow: hidden !important;
+      margin: 0 !important;
+      padding: 0 !important;
+      border: none !important;
+      background: transparent !important;
     }
 
     .left-pane,
-    .no-print {
+    .no-print,
+    .mobile-tab-bar,
+    .dropzone-overlay {
       display: none !important;
     }
   }
