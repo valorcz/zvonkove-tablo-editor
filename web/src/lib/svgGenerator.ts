@@ -172,8 +172,8 @@ export function generateFullSVG(
     colTemplatesXml += `    <g id="column-template-${cIdx + 1}">\n`;
     if (templateRenderMode === 'full') {
       const outerW = buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx;
-      const strokeColor = templateOutlineStyle === 'solid-dark' ? '#000000' : '#475569';
-      const strokeW = templateOutlineStyle === 'solid-dark' ? '1.8' : '1.2';
+      const strokeColor = templateOutlineStyle === 'solid-dark' ? '#000000' : '#94a3b8';
+      const strokeW = templateOutlineStyle === 'solid-dark' ? '1.8' : '1.0';
       const dashAttr = templateOutlineStyle === 'dashed-subtle' ? ' stroke-dasharray="6,4"' : '';
       colTemplatesXml += `        <rect x="${cOriginX.toFixed(2)}" y="${OFFSET_Y.toFixed(2)}" width="${outerW.toFixed(2)}" height="${colHeightPx.toFixed(2)}" fill="none" stroke="${strokeColor}" stroke-width="${strokeW}"${dashAttr} rx="3"/>\n`;
     }
@@ -206,8 +206,8 @@ export function generateFullSVG(
       if (templateRenderMode === 'full' && buttonPlacement !== 'none') {
         const btnX = buttonPlacement === 'left' ? cOriginX + 12 : cOriginX + slotWidthPx + 12;
         const btnW = Math.max(20, buttonWidthPx - 24);
-        colTemplatesXml += `        <rect x="${btnX.toFixed(2)}" y="${(slotTop + 10).toFixed(2)}" width="${btnW.toFixed(2)}" height="${(slotHeightPx - 20).toFixed(2)}" rx="5" fill="#f8fafc" stroke="#94a3b8" stroke-width="1.2"/>\n`;
-        colTemplatesXml += `        <circle cx="${(btnX + btnW / 2).toFixed(2)}" cy="${(slotTop + slotHeightPx / 2).toFixed(2)}" r="11" fill="#e2e8f0" stroke="#64748b" stroke-width="1.2"/>\n`;
+        colTemplatesXml += `        <rect x="${btnX.toFixed(2)}" y="${(slotTop + 10).toFixed(2)}" width="${btnW.toFixed(2)}" height="${(slotHeightPx - 20).toFixed(2)}" rx="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.0"/>\n`;
+        colTemplatesXml += `        <circle cx="${(btnX + btnW / 2).toFixed(2)}" cy="${(slotTop + slotHeightPx / 2).toFixed(2)}" r="11" fill="#f1f5f9" stroke="#94a3b8" stroke-width="1.0"/>\n`;
       }
     }
     colTemplatesXml += `    </g>\n`;
@@ -406,10 +406,10 @@ ${ticks}        <text x="${(SVG_WIDTH / 2).toFixed(2)}" y="${rulerY + 32}" text-
 ${fontFaces}
         ${styleTagClose}
     </defs>
-${colTemplatesXml}    <g id="Příjmení">
-${cardsXml}    </g>
-    <g id="Čísla-bytů" serif:id="Čísla bytů"${idsStyle}>
+${colTemplatesXml}    <g id="Čísla-bytů" serif:id="Čísla bytů"${idsStyle}>
 ${badgesXml}    </g>
+    <g id="Příjmení">
+${cardsXml}    </g>
 ${cropMarksXml}${dimensionsXml}${scaleXml}</svg>`;
 }
 

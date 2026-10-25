@@ -261,19 +261,22 @@ export function buildBadgeGeometry(params: {
 
   if (position === 'watermark') {
     const wm = getWatermarkStyle(badgeColor);
+    const slotHeight = slotBottom - slotTop;
+    const fontSize = Math.min(96, Math.max(64, Math.round(slotHeight * 0.58)));
+    const textX = slotRight - 28.0;
     return {
       id,
       idStr,
       shapes: [],
       text: {
         text: idStr,
-        x: (slotLeft + slotRight) / 2.0,
-        y: slotCenterY + 28.0,
-        fontSize: 84,
+        x: textX,
+        y: slotCenterY + fontSize * 0.35,
+        fontSize,
         fontWeight: 800,
         fill: wm.fill,
         opacity: wm.opacity,
-        textAnchor: 'middle',
+        textAnchor: 'end',
         fontFamily: numeralFontFamily,
       },
     };
@@ -347,7 +350,7 @@ export function buildBadgeGeometry(params: {
   }
 
   const fontSize = shape === 'none' ? 36 : BADGE_FONT_SIZE;
-  const textX = shape === 'none' ? colX + 665.0 : cx;
+  const textX = shape === 'none' ? slotRight - 39.0 : cx;
 
   return {
     id,

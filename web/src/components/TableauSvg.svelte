@@ -446,8 +446,8 @@
                   width={buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx}
                   height={colHeightPx}
                   fill="none"
-                  stroke={templateOutlineStyle === 'solid-dark' ? '#000000' : '#475569'}
-                  stroke-width={templateOutlineStyle === 'solid-dark' ? 1.8 : 1.2}
+                  stroke={templateOutlineStyle === 'solid-dark' ? '#000000' : '#94a3b8'}
+                  stroke-width={templateOutlineStyle === 'solid-dark' ? 1.8 : 1.0}
                   stroke-dasharray={templateOutlineStyle === 'dashed-subtle' ? '6,4' : 'none'}
                   rx="3"
                 />
@@ -485,16 +485,16 @@
                     height={slotHeightPx - 20}
                     rx="5"
                     fill="#f8fafc"
-                    stroke="#94a3b8"
-                    stroke-width="1.2"
+                    stroke="#cbd5e1"
+                    stroke-width="1.0"
                   />
                   <circle
                     cx={btnX + btnW / 2}
                     cy={slotTop + slotHeightPx / 2}
                     r="11"
-                    fill="#e2e8f0"
-                    stroke="#64748b"
-                    stroke-width="1.2"
+                    fill="#f1f5f9"
+                    stroke="#94a3b8"
+                    stroke-width="1.0"
                   />
                 {/if}
               {/each}
@@ -502,25 +502,7 @@
           {/if}
         {/each}
 
-        <!-- Names Layer -->
-        <g id="Příjmení">
-          {#each cards as card (card.id)}
-            <g id="card-flat-{String(card.id).padStart(2, '0')}">
-              {#each card.lines as line}
-                <text
-                  x="{card.textX.toFixed(2)}px"
-                  y="{line.y.toFixed(2)}px"
-                  class="name-text"
-                  style="font-family: {fontOption.fontFamily}; font-weight: {fontWeight}; font-size: {card.fs.toFixed(3)}px; letter-spacing: {letterSpacing};"
-                >
-                  {line.text}
-                </text>
-              {/each}
-            </g>
-          {/each}
-        </g>
-
-        <!-- Flat IDs Layer -->
+        <!-- Flat IDs Layer (Background / Badges / Watermark) -->
         {#if showIds && badgeStyle !== 'none'}
           <g id="Čísla-bytů">
             {#each badges as badge (badge.id)}
@@ -571,6 +553,24 @@
             {/each}
           </g>
         {/if}
+
+        <!-- Names Layer (Foreground) -->
+        <g id="Příjmení">
+          {#each cards as card (card.id)}
+            <g id="card-flat-{String(card.id).padStart(2, '0')}">
+              {#each card.lines as line}
+                <text
+                  x="{card.textX.toFixed(2)}px"
+                  y="{line.y.toFixed(2)}px"
+                  class="name-text"
+                  style="font-family: {fontOption.fontFamily}; font-weight: {fontWeight}; font-size: {card.fs.toFixed(3)}px; letter-spacing: {letterSpacing};"
+                >
+                  {line.text}
+                </text>
+              {/each}
+            </g>
+          {/each}
+        </g>
 
         <!-- Crop Marks Layer -->
         {#if showCropMarks}

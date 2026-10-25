@@ -44,12 +44,14 @@
       idStr: '01',
       position,
       shape,
-      colX: -129.54, // Align relative coordinates so slotLeft = 0, slotRight = 574.42
+      colX: 0,
       slotTop: 0,
       slotBottom: sampleSlotH,
       slotCenterY: sampleSlotH / 2.0,
       badgeColor,
       numeralFontFamily,
+      slotLeft: 0,
+      slotRight: sampleSlotW,
     });
   });
 
@@ -102,25 +104,7 @@
       <!-- Background white slot plate -->
       <rect x="0" y="0" width={sampleSlotW} height={sampleSlotH} fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5" />
 
-      <!-- Resident Names -->
-      <g id="sample-text">
-        <text
-          x="{sampleMetrics.relTextX}px"
-          y="{sampleMetrics.b1}px"
-          style="font-family: {currentFontOption.fontFamily}; font-weight: {sampleMetrics.fontWeight}; font-size: {sampleMetrics.fs}px; fill: #000000;"
-        >
-          {sampleNames[0]}
-        </text>
-        <text
-          x="{sampleMetrics.relTextX}px"
-          y="{sampleMetrics.b2}px"
-          style="font-family: {currentFontOption.fontFamily}; font-weight: {sampleMetrics.fontWeight}; font-size: {sampleMetrics.fs}px; fill: #000000;"
-        >
-          {sampleNames[1]}
-        </text>
-      </g>
-
-      <!-- Badge layer -->
+      <!-- Badge layer (Background / Watermark) -->
       {#if showIds && badgeStyle !== 'none'}
         {#each sampleBadge.shapes as shape}
           {#if shape.type === 'rect'}
@@ -164,6 +148,24 @@
           </text>
         {/if}
       {/if}
+
+      <!-- Resident Names (Foreground) -->
+      <g id="sample-text">
+        <text
+          x="{sampleMetrics.relTextX}px"
+          y="{sampleMetrics.b1}px"
+          style="font-family: {currentFontOption.fontFamily}; font-weight: {sampleMetrics.fontWeight}; font-size: {sampleMetrics.fs}px; fill: #000000;"
+        >
+          {sampleNames[0]}
+        </text>
+        <text
+          x="{sampleMetrics.relTextX}px"
+          y="{sampleMetrics.b2}px"
+          style="font-family: {currentFontOption.fontFamily}; font-weight: {sampleMetrics.fontWeight}; font-size: {sampleMetrics.fs}px; fill: #000000;"
+        >
+          {sampleNames[1]}
+        </text>
+      </g>
     </svg>
   </div>
 </div>
