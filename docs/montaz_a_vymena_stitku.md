@@ -1,6 +1,6 @@
 # Návod na fyzickou montáž a výměnu štítků – Tesla / GUARD prima
 
-Tento dokument slouží jako praktický návod pro správce domu a techniky pro bezpečnou demontáž tabla, výměnu papírových jmenovek a zpětnou montáž modulů **Tesla / GUARD prima**.
+Tento dokument slouží jako praktický návod pro správce domu a techniky pro bezpečnou demontáž tabla, výměnu papírových jmenovek a zpětnou montáž modulů **Tesla / GUARD prima** (tiskové podklady pro vyřezání připravíte v [aplikaci](../README.md) nebo [online](https://valorcz.github.io/zvonkove-tablo-editor/)).
 
 ---
 
