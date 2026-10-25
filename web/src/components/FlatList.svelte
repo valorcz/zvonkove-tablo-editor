@@ -191,7 +191,10 @@
     gap: 1rem;
     padding: 1rem;
     box-sizing: border-box;
-    overflow-x: auto;
+    align-items: start;
+    min-height: min-content;
+    width: max-content;
+    min-width: 100%;
   }
 
   .column {
@@ -200,7 +203,7 @@
     border-radius: 8px;
     display: flex;
     flex-direction: column;
-    overflow: hidden;
+    min-height: min-content;
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
   }
 
@@ -211,6 +214,8 @@
     font-weight: 700;
     color: #334155;
     border-bottom: 1px solid #e2e8f0;
+    border-top-left-radius: 8px;
+    border-top-right-radius: 8px;
     text-transform: uppercase;
     letter-spacing: 0.025em;
   }
@@ -369,8 +374,11 @@
   @media (max-width: 900px) {
     .flat-list-columns {
       grid-template-columns: 1fr;
+      width: 100%;
+      min-width: 0;
       gap: 1.25rem;
       padding: 0.75rem;
+      align-items: stretch;
     }
 
     .flat-row {

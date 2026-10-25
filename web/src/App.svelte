@@ -454,6 +454,7 @@
   .main-content {
     display: flex;
     flex: 1;
+    min-height: 0;
     overflow: hidden;
     position: relative;
     background: #0f172a;
@@ -461,6 +462,7 @@
 
   .pane {
     height: 100%;
+    min-height: 0;
     overflow: hidden;
     position: relative;
     box-sizing: border-box;
@@ -470,6 +472,7 @@
   .left-pane {
     flex: 1.15;
     min-width: 380px;
+    min-height: 0;
     background: #f8fafc;
     border-right: 1px solid #334155;
     display: flex;
@@ -535,9 +538,14 @@
 
   .left-pane-body {
     flex: 1;
+    min-height: 0;
     overflow-y: auto;
+    overflow-x: auto;
     display: flex;
     flex-direction: column;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+    touch-action: pan-y pan-x;
   }
 
   /* Mobile bottom tab bar */
@@ -621,11 +629,13 @@
       border-right: none;
       flex: 1;
       width: 100%;
+      min-height: 0;
     }
 
     .preview-pane {
       flex: 1;
       width: 100%;
+      min-height: 0;
     }
 
     .mobile-hidden {
