@@ -154,6 +154,7 @@
     {showIds}
     {textPaddingLeft}
     {numeralFontMode}
+    preset={layout.preset}
     {onClose}
   />
 

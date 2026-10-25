@@ -1,10 +1,12 @@
 <script lang="ts">
-  import type { BadgeStyleId, NumeralFontMode } from '../../lib/types';
+  import type { BadgeStyleId, NumeralFontMode, TableauPresetId } from '../../lib/types';
   import {
     getSlotCoordinates,
     calculateFontSize,
     type FontOption,
+    PX_PER_MM,
   } from '../../lib/tableauConfig';
+  import { getHardwareProfileForPreset } from '../../lib/hardwareProfiles';
   import { decodeBadgeStyle, buildBadgeGeometry } from '../../lib/badgeRegistry';
 
   let {
@@ -15,6 +17,7 @@
     showIds = false,
     textPaddingLeft = 88.5,
     numeralFontMode = 'iosevka',
+    preset = 'tesla-guard-28',
     onClose = () => {},
   }: {
     badgeStyle: BadgeStyleId;
@@ -24,11 +27,15 @@
     showIds: boolean;
     textPaddingLeft: number;
     numeralFontMode?: NumeralFontMode;
+    preset?: TableauPresetId;
     onClose?: () => void;
   } = $props();
 
-  const sampleSlotW = 574.42;
-  const sampleSlotH = 152.4;
+  const currentProfile = $derived(getHardwareProfileForPreset(preset));
+  const system = $derived(currentProfile.system);
+
+  const sampleSlotW = $derived((system.slot.widthMm || 48.63) * PX_PER_MM);
+  const sampleSlotH = $derived((system.slot.heightMm || 12.90) * PX_PER_MM);
   const sampleNames = ['Jan Novák', 'Marie Nováková'];
 
   const numeralFontFamily = $derived(
@@ -56,10 +63,11 @@
   });
 
   const sampleMetrics = $derived.by(() => {
-    const coords = getSlotCoordinates(0, 0, badgeStyle, textPaddingLeft);
-    const relTextX = coords.textX - (coords.colX + 129.54);
+    const coords = getSlotCoordinates(0, 0, badgeStyle, textPaddingLeft, [0], system);
+    const buttonOffset = system.module?.button?.placement === 'left' ? (system.module?.button?.widthMm || 10.97) * PX_PER_MM : 0;
+    const relTextX = coords.textX - coords.colX - buttonOffset;
     const relCenterY = sampleSlotH / 2.0;
-    const fs = calculateFontSize(sampleNames, currentFontOption, isBold, badgeStyle, textPaddingLeft);
+    const fs = calculateFontSize(sampleNames, currentFontOption, isBold, badgeStyle, textPaddingLeft, system);
 
     const isTwoLines = sampleNames.length > 1;
     const lineHeight = fs * 1.18;

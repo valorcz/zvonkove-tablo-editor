@@ -7,6 +7,7 @@
     getDefaultLayout,
     computeSlotMapping,
   } from '../lib/tableauConfig';
+  import { getHardwareProfileForPreset } from '../lib/hardwareProfiles';
   import { decodeBadgeStyle } from '../lib/badgeRegistry';
 
   let {
@@ -26,6 +27,9 @@
     textPaddingLeft?: number;
     layout?: TableauLayoutConfig;
   } = $props();
+
+  const currentProfile = $derived(getHardwareProfileForPreset(layout.preset));
+  const system = $derived(currentProfile.system);
 
   function getFlat(id: number): FlatEntry {
     return flats.find((f) => f.id === id) || { id, name1: '', name2: '' };
@@ -120,7 +124,7 @@
         {#each col.slots as slot (slot.slotIndex)}
           {@const flat = getFlat(slot.slotIndex)}
           {@const displayNum = flat.customNumber || slot.defaultNumber}
-          {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft)}
+          {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft, system)}
           {@const { position, shape } = decodeBadgeStyle(badgeStyle)}
           {@const isColored = position !== 'none' && ((position === 'right-center' && shape !== 'none') || (position === 'corner-index' && shape !== 'none') || position === 'left-block' || position === 'watermark')}
           <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>

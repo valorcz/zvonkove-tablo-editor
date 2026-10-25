@@ -116,7 +116,7 @@
         const displayNames = names.length > 0 ? names : [`Byt ${idStr}`];
 
         const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins, system);
-        const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
+        const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft, system);
 
         const lines: { text: string; y: number }[] = [];
         if (displayNames.length === 1) {

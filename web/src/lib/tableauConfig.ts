@@ -205,22 +205,41 @@ export function computeColumnOrigins(layout: TableauLayoutConfig): number[] {
   return Array.from({ length: numCols }, (_, i) => startX + i * (colWidth + gap));
 }
 
+export function getDefaultFontSizes(system?: HardwareSystem): { defaultSingle: number; defaultDouble: number } {
+  const slotHeightMm = system?.slot?.heightMm || 12.90;
+  const slotHeightPx = slotHeightMm * PX_PER_MM;
+  return {
+    defaultSingle: Math.round(slotHeightPx * 0.380 * 10) / 10,
+    defaultDouble: Math.round(slotHeightPx * 0.315 * 10) / 10,
+  };
+}
+
 export function getStyleMetrics(
   styleId: BadgeStyleId,
-  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
+  system?: HardwareSystem
 ): {
   textLeftPadding: number;
   maxTextWidth: number;
 } {
   const { position, shape } = decodeBadgeStyle(styleId);
+  const btnPlacement = system?.module?.button?.placement || 'left';
+  const btnWidthPx = (system?.module?.button?.widthMm || 10.97) * PX_PER_MM;
+  const slotWidthPx = (system?.slot?.widthMm || 48.63) * PX_PER_MM;
+  const slotHeightPx = (system?.slot?.heightMm || 12.90) * PX_PER_MM;
+
+  const slotLeft = btnPlacement === 'left' ? btnWidthPx : 0;
+  const slotRight = slotLeft + slotWidthPx;
+
   const metrics = getBadgeLayoutTextMetrics(
     position,
     shape,
     0,
     0,
-    152.4,
-    703.96,
-    textPaddingLeft
+    slotHeightPx,
+    slotRight,
+    textPaddingLeft,
+    slotLeft
   );
   return {
     textLeftPadding: metrics.textX,
@@ -392,11 +411,13 @@ export function calculateFontSize(
   fontOption: FontOption,
   isBold = true,
   styleId: BadgeStyleId = 'classic',
-  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
+  system?: HardwareSystem
 ): number {
   const isTwoLines = names.length > 1;
-  const defaultSize = isTwoLines ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
-  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft);
+  const { defaultSingle, defaultDouble } = getDefaultFontSizes(system);
+  const defaultSize = isTwoLines ? defaultDouble : defaultSingle;
+  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft, system);
 
   let longestName = '';
   for (const n of names) {
@@ -421,16 +442,18 @@ export function checkFitStatus(
   fontOption: FontOption,
   isBold = true,
   styleId: BadgeStyleId = 'classic',
-  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
+  system?: HardwareSystem
 ): 'ok' | 'tight' | 'overflow' {
   const filtered = names.filter((n) => n.trim().length > 0);
   if (filtered.length === 0) return 'ok';
 
   const isTwoLines = filtered.length > 1;
-  const defaultSize = isTwoLines ? DEFAULT_FS_DOUBLE : DEFAULT_FS_SINGLE;
-  const fs = calculateFontSize(filtered, fontOption, isBold, styleId, textPaddingLeft);
+  const { defaultSingle, defaultDouble } = getDefaultFontSizes(system);
+  const defaultSize = isTwoLines ? defaultDouble : defaultSingle;
+  const fs = calculateFontSize(filtered, fontOption, isBold, styleId, textPaddingLeft, system);
 
-  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft);
+  const { maxTextWidth } = getStyleMetrics(styleId, textPaddingLeft, system);
   let maxW = 0;
   for (const n of filtered) {
     const w = measureTextWidth(n, fs, fontOption, isBold);

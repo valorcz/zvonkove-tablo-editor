@@ -101,7 +101,7 @@ export function generateFullSVG(
     const displayNames = names.length > 0 ? names : [`Byt ${idStr}`];
 
     const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft, colOrigins, system);
-    const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
+    const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft, system);
 
     const letterSpacing = fontOption.id === 'TechnicNT' || fontOption.id === 'DIN' ? '0.025em' : 'normal';
 
