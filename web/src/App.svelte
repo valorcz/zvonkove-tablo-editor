@@ -11,7 +11,14 @@
     getDefaultLayout,
     getTotalSlots,
   } from './lib/tableauConfig';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from './lib/types';
+  import type {
+    FlatEntry,
+    BadgeStyleId,
+    PrintColumnOption,
+    TableauLayoutConfig,
+    NumeralFontMode,
+    TemplateRenderMode,
+  } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
   const LEGACY_STORAGE_KEYS = [
@@ -34,6 +41,8 @@
     layout?: TableauLayoutConfig;
     leftPaneView?: 'names' | 'settings';
     numeralFontMode?: NumeralFontMode;
+    templateRenderMode?: TemplateRenderMode;
+    showDimensions?: boolean;
   }
 
   function loadInitialState(): StoredState {
@@ -75,6 +84,8 @@
           layout: parsedLayout,
           leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
           numeralFontMode: parsed.numeralFontMode === 'inherit' ? 'inherit' : 'iosevka',
+          templateRenderMode: parsed.templateRenderMode === 'cut-strips' ? 'cut-strips' : 'full',
+          showDimensions: typeof parsed.showDimensions === 'boolean' ? parsed.showDimensions : false,
         };
       }
     } catch {
@@ -96,6 +107,8 @@
       layout: defaultLayout,
       leftPaneView: 'names',
       numeralFontMode: 'iosevka',
+      templateRenderMode: 'full',
+      showDimensions: false,
     };
   }
 
@@ -112,6 +125,8 @@
   let printColumn: PrintColumnOption = $state(initial.printColumn || 'all');
   let layout: TableauLayoutConfig = $state(initial.layout || getDefaultLayout());
   let numeralFontMode: NumeralFontMode = $state(initial.numeralFontMode || 'iosevka');
+  let templateRenderMode: TemplateRenderMode = $state(initial.templateRenderMode || 'full');
+  let showDimensions: boolean = $state(initial.showDimensions || false);
   let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
   let mobileTab: 'names' | 'settings' | 'preview' = $state(
     initial.leftPaneView === 'settings' ? 'settings' : 'names'
@@ -143,6 +158,8 @@
           layout,
           leftPaneView,
           numeralFontMode,
+          templateRenderMode,
+          showDimensions,
         })
       );
     } catch {
@@ -211,6 +228,8 @@
       bind:selectedFontId
       bind:isBold
       bind:showScale
+      bind:showDimensions
+      bind:templateRenderMode
       bind:badgeStyle
       bind:showCropMarks
       textPaddingLeft={textPaddingLeft}
@@ -350,6 +369,8 @@
             bind:textPaddingLeft
             bind:showCropMarks
             bind:showScale
+            bind:showDimensions
+            bind:templateRenderMode
             bind:printColumn
             bind:layout
             bind:numeralFontMode
@@ -374,6 +395,8 @@
         fontOption={currentFontOption}
         {isBold}
         {showScale}
+        {showDimensions}
+        {templateRenderMode}
         {badgeStyle}
         {showCropMarks}
         {textPaddingLeft}

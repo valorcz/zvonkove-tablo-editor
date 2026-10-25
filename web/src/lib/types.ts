@@ -12,6 +12,8 @@ export type NumberingDirection = 'bottom-up' | 'top-down' | 'row-left-right';
 
 export type PrintLayoutMode = 'frame-1to1' | 'compact-strips';
 
+export type TemplateRenderMode = 'full' | 'cut-strips';
+
 export interface ColumnConfig {
   id: number;
   capacity: number;   // total button positions of module (typically 10 or 5)
@@ -27,6 +29,8 @@ export interface PresetDefinition {
   numberingDirection: NumberingDirection;
   startNumber: number;
   printMode: PrintLayoutMode;
+  templateRenderMode?: TemplateRenderMode;
+  showDimensions?: boolean;
 }
 
 export interface TableauLayoutConfig {
@@ -35,6 +39,8 @@ export interface TableauLayoutConfig {
   numberingDirection: NumberingDirection;
   startNumber: number;
   printMode: PrintLayoutMode;
+  templateRenderMode?: TemplateRenderMode;
+  showDimensions?: boolean;
 }
 
 export interface FlatEntry {

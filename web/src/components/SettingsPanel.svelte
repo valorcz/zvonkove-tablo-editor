@@ -5,6 +5,7 @@
     FlatEntry,
     TableauLayoutConfig,
     NumeralFontMode,
+    TemplateRenderMode,
   } from '../lib/types';
   import {
     FONT_OPTIONS,
@@ -33,6 +34,8 @@
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
     showCropMarks = $bindable(true),
     showScale = $bindable(true),
+    showDimensions = $bindable(false),
+    templateRenderMode = $bindable('full'),
     printColumn = $bindable('all'),
     layout = $bindable(getDefaultLayout()),
     numeralFontMode = $bindable('iosevka'),
@@ -47,6 +50,8 @@
     textPaddingLeft: number;
     showCropMarks: boolean;
     showScale: boolean;
+    showDimensions?: boolean;
+    templateRenderMode?: TemplateRenderMode;
     printColumn?: PrintColumnOption;
     layout?: TableauLayoutConfig;
     numeralFontMode?: NumeralFontMode;
@@ -70,6 +75,8 @@
         textPaddingLeft,
         showCropMarks,
         showScale,
+        showDimensions,
+        templateRenderMode,
         printColumn,
         numeralFontMode,
       },
@@ -90,6 +97,8 @@
       if (typeof s.textPaddingLeft === 'number') textPaddingLeft = s.textPaddingLeft;
       if (typeof s.showCropMarks === 'boolean') showCropMarks = s.showCropMarks;
       if (typeof s.showScale === 'boolean') showScale = s.showScale;
+      if (typeof s.showDimensions === 'boolean') showDimensions = s.showDimensions;
+      if (s.templateRenderMode) templateRenderMode = s.templateRenderMode;
       if (s.printColumn !== undefined) printColumn = s.printColumn;
       if (s.numeralFontMode) numeralFontMode = s.numeralFontMode;
     }
@@ -151,7 +160,14 @@
     <BadgeSettings bind:badgeStyle bind:badgeColor bind:showIds />
 
     <!-- Print Aids & Scope -->
-    <PrintSettings bind:showCropMarks bind:showScale bind:printColumn columns={layout.columns} />
+    <PrintSettings
+      bind:showCropMarks
+      bind:showScale
+      bind:showDimensions
+      bind:templateRenderMode
+      bind:printColumn
+      columns={layout.columns}
+    />
 
     <!-- YAML Sharing & Backup -->
     <YamlBackupSettings

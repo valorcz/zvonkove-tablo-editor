@@ -1,21 +1,27 @@
 <script lang="ts">
   import { tick } from 'svelte';
   import ZoomToolbar from './ZoomToolbar.svelte';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from '../lib/types';
+  import type {
+    FlatEntry,
+    BadgeStyleId,
+    PrintColumnOption,
+    TableauLayoutConfig,
+    NumeralFontMode,
+    TemplateRenderMode,
+  } from '../lib/types';
+  import { getHardwareProfileForPreset } from '../lib/hardwareProfiles';
   import { decodeBadgeStyle, buildBadgeGeometry } from '../lib/badgeRegistry';
   import {
     SVG_VIEWBOX,
     SVG_WIDTH,
     PX_PER_MM,
+    OFFSET_Y,
+    SCALE_Y,
+    IMAGE_SLOT_TOP_0,
     getSlotCoordinates,
     calculateFontSize,
     type FontOption,
-    BADGE_WIDTH,
-    BADGE_HEIGHT,
-    BADGE_RX,
-    BADGE_FONT_SIZE,
     DEFAULT_TEXT_PADDING_LEFT,
-    getWatermarkStyle,
     getDefaultLayout,
     computeSlotMapping,
     computeColumnOrigins,
@@ -28,6 +34,8 @@
     fontOption,
     isBold,
     showScale = true,
+    showDimensions = false,
+    templateRenderMode = 'full',
     badgeStyle = 'classic',
     showCropMarks = true,
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
@@ -41,6 +49,8 @@
     fontOption: FontOption;
     isBold: boolean;
     showScale?: boolean;
+    showDimensions?: boolean;
+    templateRenderMode?: TemplateRenderMode;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
@@ -66,6 +76,25 @@
   const colOrigins = $derived(computeColumnOrigins(layout));
   const mappings = $derived(computeSlotMapping(layout));
 
+  const hardwareInfo = $derived(getHardwareProfileForPreset(layout.preset));
+  const system = $derived(hardwareInfo.system);
+  const manufacturer = $derived(hardwareInfo.manufacturer);
+
+  const slotWidthMm = $derived(system.slot.widthMm || 48.63);
+  const slotHeightMm = $derived(system.slot.heightMm || 12.90);
+  const slotStepMm = $derived(system.module?.slotStepMm || 15.88);
+  const buttonPlacement = $derived(system.module?.button?.placement || 'left');
+  const buttonWidthMm = $derived(system.module?.button?.widthMm || 10.97);
+  const moduleWidthMm = $derived(system.module?.moduleWidthMm || 61.64);
+  const cornerRadiusMm = $derived(system.slot.cornerRadiusMm || 1.0);
+
+  const slotWidthPx = $derived(slotWidthMm * PX_PER_MM);
+  const slotHeightPx = $derived(slotHeightMm * PX_PER_MM);
+  const slotStepPx = $derived(slotStepMm * PX_PER_MM);
+  const buttonWidthPx = $derived(buttonWidthMm * PX_PER_MM);
+  const moduleWidthPx = $derived(moduleWidthMm * PX_PER_MM);
+  const cornerRadiusPx = $derived(cornerRadiusMm * PX_PER_MM);
+
   interface RenderCard {
     id: number;
     names: string[];
@@ -83,7 +112,7 @@
         const idStr = entry.customNumber || slot.defaultNumber;
         const displayNames = names.length > 0 ? names : [`Byt ${idStr}`];
 
-        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins);
+        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins, system);
         const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
         const lines: { text: string; y: number }[] = [];
@@ -119,9 +148,12 @@
       .filter((slot) => printColumn === 'all' || slot.colIndex + 1 === printColumn)
       .map((slot) => {
         const entry = flats.find((f) => f.id === slot.slotIndex) || { id: slot.slotIndex, name1: '', name2: '' };
-        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins);
+        const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins, system);
         const idStr = entry.customNumber || slot.defaultNumber;
         const { position, shape } = decodeBadgeStyle(badgeStyle);
+
+        const slotLeft = buttonPlacement === 'left' ? coords.colX + buttonWidthPx : coords.colX;
+        const slotRight = slotLeft + slotWidthPx;
 
         return buildBadgeGeometry({
           id: slot.slotIndex,
@@ -134,6 +166,8 @@
           slotCenterY: coords.slotCenterY,
           badgeColor,
           numeralFontFamily,
+          slotLeft,
+          slotRight,
         });
       })
   );
@@ -141,8 +175,6 @@
   // Corner crop marks for columns
   const colCropMarks = $derived.by(() => {
     if (!showCropMarks) return [];
-    const colW = 621.0 * 1.17229;
-    const topY = 210.788;
     const markLen = 22.0;
     const markGap = 5.0;
 
@@ -150,23 +182,24 @@
     for (let cIdx = 0; cIdx < layout.columns.length; cIdx++) {
       if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
       const colCfg = layout.columns[cIdx];
-      const colH = (colCfg.capacity === 5 ? 811.0 : 1611.0) * 1.17231;
-      const botY = topY + colH;
       const colX = colOrigins[cIdx];
-      const rightX = colX + colW;
+      const sLeft = buttonPlacement === 'left' ? colX + buttonWidthPx : colX;
+      const sRight = sLeft + slotWidthPx;
+      const sTop = OFFSET_Y + IMAGE_SLOT_TOP_0 * SCALE_Y;
+      const sBot = sTop + (colCfg.capacity - 1) * slotStepPx + slotHeightPx;
 
       // Top-left
-      list.push({ x1: colX, y1: topY - markGap - markLen, x2: colX, y2: topY - markGap });
-      list.push({ x1: colX - markGap - markLen, y1: topY, x2: colX - markGap, y2: topY });
+      list.push({ x1: sLeft, y1: sTop - markGap - markLen, x2: sLeft, y2: sTop - markGap });
+      list.push({ x1: sLeft - markGap - markLen, y1: sTop, x2: sLeft - markGap, y2: sTop });
       // Top-right
-      list.push({ x1: rightX, y1: topY - markGap - markLen, x2: rightX, y2: topY - markGap });
-      list.push({ x1: rightX + markGap, y1: topY, x2: rightX + markGap + markLen, y2: topY });
+      list.push({ x1: sRight, y1: sTop - markGap - markLen, x2: sRight, y2: sTop - markGap });
+      list.push({ x1: sRight + markGap, y1: sTop, x2: sRight + markGap + markLen, y2: sTop });
       // Bottom-left
-      list.push({ x1: colX, y1: botY + markGap, x2: colX, y2: botY + markGap + markLen });
-      list.push({ x1: colX - markGap - markLen, y1: botY, x2: colX - markGap, y2: botY });
+      list.push({ x1: sLeft, y1: sBot + markGap, x2: sLeft, y2: sBot + markGap + markLen });
+      list.push({ x1: sLeft - markGap - markLen, y1: sBot, x2: sLeft - markGap, y2: sBot });
       // Bottom-right
-      list.push({ x1: rightX, y1: botY + markGap, x2: rightX, y2: botY + markGap + markLen });
-      list.push({ x1: rightX + markGap, y1: botY, x2: rightX + markGap + markLen, y2: botY });
+      list.push({ x1: sRight, y1: sBot + markGap, x2: sRight, y2: sBot + markGap + markLen });
+      list.push({ x1: sRight + markGap, y1: sBot, x2: sRight + markGap + markLen, y2: sBot });
     }
     return list;
   });
@@ -175,7 +208,7 @@
   const rulerLengthMm = 100;
   const rulerLengthPx = rulerLengthMm * PX_PER_MM;
   const startX = (SVG_WIDTH - rulerLengthPx) / 2.0;
-  const rulerY = 2270;
+  const rulerY = 2215;
 
   const rulerTicks = Array.from({ length: rulerLengthMm + 1 }, (_, mm) => {
     const x = startX + mm * PX_PER_MM;
@@ -372,28 +405,69 @@
             }
           </style>
 
-          <!-- 10-slot Column Template -->
-          <g id="_ColumnTemplate10">
-            <rect x="0.5" y="0.5" width="621" height="1611" fill="none" stroke="#000000" stroke-width="1.5" />
-            {#each templateSlotYs10 as y}
-              <rect x="110.5" y={y} width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5" />
-            {/each}
-          </g>
-
-          <!-- 5-slot Column Template -->
-          <g id="_ColumnTemplate5">
-            <rect x="0.5" y="0.5" width="621" height="811" fill="none" stroke="#000000" stroke-width="1.5" />
-            {#each templateSlotYs5 as y}
-              <rect x="110.5" y={y} width="490" height="130" fill="none" stroke="#000000" stroke-width="1.5" />
-            {/each}
-          </g>
         </defs>
 
         <!-- Column vector backgrounds -->
         {#each layout.columns as colCfg, cIdx}
           {#if printColumn === 'all' || printColumn === cIdx + 1}
-            <g transform="matrix(1.17229,0,0,1.17231,{colOrigins[cIdx]},210.788)">
-              <use xlink:href={colCfg.capacity === 5 ? '#_ColumnTemplate5' : '#_ColumnTemplate10'} />
+            {@const cOriginX = colOrigins[cIdx]}
+            {@const colHeightPx = (IMAGE_SLOT_TOP_0 * 2 * SCALE_Y) + (colCfg.capacity * slotStepPx)}
+            <g id="column-template-{cIdx + 1}">
+              {#if templateRenderMode === 'full'}
+                <!-- Module outer border -->
+                <rect
+                  x={cOriginX}
+                  y={OFFSET_Y}
+                  width={buttonPlacement === 'none' ? slotWidthPx : moduleWidthPx}
+                  height={colHeightPx}
+                  fill="none"
+                  stroke="#000000"
+                  stroke-width="1.8"
+                  rx="3"
+                />
+              {/if}
+
+              <!-- Slots & Buttons for column -->
+              {#each Array.from({ length: colCfg.capacity }, (_, r) => r) as r}
+                {@const slotTop = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y) + r * slotStepPx}
+                {@const slotLeft = buttonPlacement === 'left' ? cOriginX + buttonWidthPx : cOriginX}
+
+                <!-- Slot cutout rectangle -->
+                <rect
+                  x={slotLeft}
+                  y={slotTop}
+                  width={slotWidthPx}
+                  height={slotHeightPx}
+                  fill="none"
+                  stroke="#000000"
+                  stroke-width="1.5"
+                  rx={cornerRadiusPx}
+                />
+
+                {#if templateRenderMode === 'full' && buttonPlacement !== 'none'}
+                  {@const btnX = buttonPlacement === 'left' ? cOriginX + 12 : cOriginX + slotWidthPx + 12}
+                  {@const btnW = Math.max(20, buttonWidthPx - 24)}
+                  <!-- Tactile button cutout -->
+                  <rect
+                    x={btnX}
+                    y={slotTop + 10}
+                    width={btnW}
+                    height={slotHeightPx - 20}
+                    rx="5"
+                    fill="#f8fafc"
+                    stroke="#94a3b8"
+                    stroke-width="1.2"
+                  />
+                  <circle
+                    cx={btnX + btnW / 2}
+                    cy={slotTop + slotHeightPx / 2}
+                    r="11"
+                    fill="#e2e8f0"
+                    stroke="#64748b"
+                    stroke-width="1.2"
+                  />
+                {/if}
+              {/each}
             </g>
           {/if}
         {/each}
@@ -484,8 +558,104 @@
           </g>
         {/if}
 
-        <!-- 100 mm Printable Calibration Scale -->
+        <!-- Technical Dimension Lines Layer -->
+        {#if showDimensions}
+          {@const firstColIdx = printColumn === 'all' ? 0 : printColumn - 1}
+          {@const firstColCfg = layout.columns[firstColIdx]}
+          {#if firstColCfg}
+            {@const cOriginX = colOrigins[firstColIdx]}
+            {@const slot0Left = buttonPlacement === 'left' ? cOriginX + buttonWidthPx : cOriginX}
+            {@const slot0Top = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y)}
+            {@const slot0Right = slot0Left + slotWidthPx}
+            {@const slot0Bottom = slot0Top + slotHeightPx}
+            {@const dimY = slot0Top - 42}
+            {@const dimX = slot0Right + 45}
+            {@const modDimY = slot0Top - 88}
+
+            <g id="Technické-kóty">
+              <!-- 1. Horizontal dimension: Slot Width -->
+              <line x1={slot0Left} y1={slot0Top - 6} x2={slot0Left} y2={slot0Top - 56} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+              <line x1={slot0Right} y1={slot0Top - 6} x2={slot0Right} y2={slot0Top - 56} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+              <line x1={slot0Left + 12} y1={dimY} x2={slot0Right - 12} y2={dimY} stroke="#0f172a" stroke-width="1.8" />
+              <polygon points="{slot0Left},{dimY} {slot0Left + 12},{dimY - 5} {slot0Left + 12},{dimY + 5}" fill="#0f172a" />
+              <polygon points="{slot0Right},{dimY} {slot0Right - 12},{dimY - 5} {slot0Right - 12},{dimY + 5}" fill="#0f172a" />
+              <rect x={slot0Left + slotWidthPx / 2 - 58} y={dimY - 14} width="116" height="26" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+              <text
+                x={slot0Left + slotWidthPx / 2}
+                y={dimY + 1}
+                text-anchor="middle"
+                dominant-baseline="central"
+                style="font-family:'DINish', sans-serif; font-size: 20px; font-weight: 700; fill: #0f172a;"
+              >
+                {slotWidthMm.toFixed(1).replace('.', ',')} mm
+              </text>
+
+              <!-- 2. Vertical dimension: Slot Height -->
+              <line x1={slot0Right + 6} y1={slot0Top} x2={slot0Right + 58} y2={slot0Top} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+              <line x1={slot0Right + 6} y1={slot0Bottom} x2={slot0Right + 58} y2={slot0Bottom} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+              <line x1={dimX} y1={slot0Top + 12} x2={dimX} y2={slot0Bottom - 12} stroke="#0f172a" stroke-width="1.8" />
+              <polygon points="{dimX},{slot0Top} {dimX - 5},{slot0Top + 12} {dimX + 5},{slot0Top + 12}" fill="#0f172a" />
+              <polygon points="{dimX},{slot0Bottom} {dimX - 5},{slot0Bottom - 12} {dimX + 5},{slot0Bottom - 12}" fill="#0f172a" />
+              <rect x={dimX + 12} y={slot0Top + slotHeightPx / 2 - 13} width="96" height="26" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+              <text
+                x={dimX + 60}
+                y={slot0Top + slotHeightPx / 2 + 1}
+                text-anchor="middle"
+                dominant-baseline="central"
+                style="font-family:'DINish', sans-serif; font-size: 20px; font-weight: 700; fill: #0f172a;"
+              >
+                {slotHeightMm.toFixed(1).replace('.', ',')} mm
+              </text>
+
+              <!-- 3. Pitch dimension between row 0 and row 1 -->
+              {#if firstColCfg.capacity >= 2}
+                {@const slot1Top = slot0Top + slotStepPx}
+                {@const pitchDimX = slot0Left - 45}
+                <line x1={slot0Left - 6} y1={slot0Top} x2={slot0Left - 58} y2={slot0Top} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+                <line x1={slot0Left - 6} y1={slot1Top} x2={slot0Left - 58} y2={slot1Top} stroke="#475569" stroke-width="1.2" stroke-dasharray="3,3" />
+                <line x1={pitchDimX} y1={slot0Top + 12} x2={pitchDimX} y2={slot1Top - 12} stroke="#0f172a" stroke-width="1.8" />
+                <polygon points="{pitchDimX},{slot0Top} {pitchDimX - 5},{slot0Top + 12} {pitchDimX + 5},{slot0Top + 12}" fill="#0f172a" />
+                <polygon points="{pitchDimX},{slot1Top} {pitchDimX - 5},{slot1Top - 12} {pitchDimX + 5},{slot1Top - 12}" fill="#0f172a" />
+                <rect x={pitchDimX - 165} y={slot0Top + slotStepPx / 2 - 13} width="155" height="26" rx="4" fill="#ffffff" stroke="#94a3b8" stroke-width="1" />
+                <text
+                  x={pitchDimX - 88}
+                  y={slot0Top + slotStepPx / 2 + 1}
+                  text-anchor="middle"
+                  dominant-baseline="central"
+                  style="font-family:'DINish', sans-serif; font-size: 18px; font-weight: 600; fill: #1e293b;"
+                >
+                  rozteč {slotStepMm.toFixed(1).replace('.', ',')} mm
+                </text>
+              {/if}
+
+              <!-- 4. Module width dimension -->
+              {#if templateRenderMode === 'full' && buttonPlacement !== 'none'}
+                <line x1={cOriginX} y1={slot0Top - 6} x2={cOriginX} y2={slot0Top - 100} stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3" />
+                <line x1={cOriginX + moduleWidthPx} y1={slot0Top - 6} x2={cOriginX + moduleWidthPx} y2={slot0Top - 100} stroke="#94a3b8" stroke-width="1" stroke-dasharray="3,3" />
+                <line x1={cOriginX + 12} y1={modDimY} x2={cOriginX + moduleWidthPx - 12} y2={modDimY} stroke="#475569" stroke-width="1.5" />
+                <polygon points="{cOriginX},{modDimY} {cOriginX + 12},{modDimY - 4} {cOriginX + 12},{modDimY + 4}" fill="#475569" />
+                <polygon points="{cOriginX + moduleWidthPx},{modDimY} {cOriginX + moduleWidthPx - 12},{modDimY - 4} {cOriginX + moduleWidthPx - 12},{modDimY + 4}" fill="#475569" />
+                <rect x={cOriginX + moduleWidthPx / 2 - 100} y={modDimY - 14} width="200" height="24" rx="4" fill="#ffffff" stroke="#cbd5e1" stroke-width="1" />
+                <text
+                  x={cOriginX + moduleWidthPx / 2}
+                  y={modDimY}
+                  text-anchor="middle"
+                  dominant-baseline="central"
+                  style="font-family:'DINish', sans-serif; font-size: 17px; font-weight: 600; fill: #475569;"
+                >
+                  celý modul {moduleWidthMm.toFixed(1).replace('.', ',')} mm
+                </text>
+              {/if}
+            </g>
+          {/if}
+        {/if}
+
+        <!-- 100 mm Printable Calibration Scale & Engineering Stamp -->
         {#if showScale}
+          {@const stampW = 2460}
+          {@const stampH = 105}
+          {@const stampX = (SVG_WIDTH - stampW) / 2}
+          {@const stampY = rulerY + 50}
           <g id="Měřítko-tisku">
             <line
               x1={startX}
@@ -516,32 +686,64 @@
                 </text>
               {/if}
             {/each}
+
+            <!-- Scale title -->
             <text
               x={SVG_WIDTH / 2.0}
-              y={rulerY + 36}
+              y={rulerY + 32}
               text-anchor="middle"
               class="scale-text"
-              style="font-size: 26px; font-weight: 700;"
+              style="font-size: 22px; font-weight: 700; fill: #0f172a;"
             >
-              KONTROLNÍ MĚŘÍTKO 1:1 (PŘESNĚ 100 mm / 10 cm)
+              KONTROLNÍ MĚŘÍTKO 1:1 (PŘESNĚ 100 mm / 10 cm) • PŘED ŘEZÁNÍM OVĚŘTE PRAVÍTKEM
             </text>
-            <text
-              x={SVG_WIDTH / 2.0}
-              y={rulerY + 68}
-              text-anchor="middle"
-              class="scale-text"
-              style="font-size: 20px; fill: #475569;"
-            >
-              Při tisku zkontrolujte pravítkem. Pokud úsečka neměří přesně 100 mm, nastavte okraje na Žádné a měřítko na 100%.
+
+            <!-- Engineering technical stamp -->
+            <rect
+              x={stampX}
+              y={stampY}
+              width={stampW}
+              height={stampH}
+              rx="6"
+              fill="#f8fafc"
+              stroke="#64748b"
+              stroke-width="1.8"
+            />
+            <!-- Vertical dividers -->
+            <line x1={stampX + 800} y1={stampY} x2={stampX + 800} y2={stampY + stampH} stroke="#cbd5e1" stroke-width="1.2" />
+            <line x1={stampX + 1640} y1={stampY} x2={stampX + 1640} y2={stampY + stampH} stroke="#cbd5e1" stroke-width="1.2" />
+
+            <!-- Col 1: Hardware system -->
+            <text x={stampX + 24} y={stampY + 28} style="font-family:'DINish', sans-serif; font-size: 14px; font-weight: 700; fill: #64748b; letter-spacing: 0.05em;">
+              HARDWAROVÝ SYSTÉM
             </text>
-            <text
-              x={SVG_WIDTH / 2.0}
-              y={rulerY + 96}
-              text-anchor="middle"
-              class="scale-text"
-              style="font-size: 18px; fill: #64748b;"
-            >
-              Rozměr jednoho štítku: 48,6 × 12,9 mm {layout.printMode === 'compact-strips' ? '• Úsporný tisk modulů (Nesting)' : ''}
+            <text x={stampX + 24} y={stampY + 56} style="font-family:'DINish', sans-serif; font-size: 19px; font-weight: 700; fill: #0f172a;">
+              {manufacturer.name} — {system.name}
+            </text>
+            <text x={stampX + 24} y={stampY + 82} style="font-family:'DINish', sans-serif; font-size: 15px; fill: #475569;">
+              {system.module?.name || 'Tlačítkový modul'} • Tlačítka: {buttonPlacement === 'left' ? 'vlevo' : buttonPlacement === 'right' ? 'vpravo' : 'bez tlačítek'}
+            </text>
+
+            <!-- Col 2: Dimensions -->
+            <text x={stampX + 824} y={stampY + 28} style="font-family:'DINish', sans-serif; font-size: 14px; font-weight: 700; fill: #64748b; letter-spacing: 0.05em;">
+              PŘESNÉ FYZICKÉ ROZMĚRY PRO STŘIH (1:1)
+            </text>
+            <text x={stampX + 824} y={stampY + 56} style="font-family:'DINish', sans-serif; font-size: 19px; font-weight: 700; fill: #0284c7;">
+              Výřez jmenovky: {slotWidthMm.toFixed(1).replace('.', ',')} × {slotHeightMm.toFixed(1).replace('.', ',')} mm
+            </text>
+            <text x={stampX + 824} y={stampY + 82} style="font-family:'DINish', sans-serif; font-size: 15px; fill: #475569;">
+              Krok slotů (rozteč): {slotStepMm.toFixed(1).replace('.', ',')} mm • Šířka modulu: {moduleWidthMm.toFixed(1).replace('.', ',')} mm
+            </text>
+
+            <!-- Col 3: Print instructions -->
+            <text x={stampX + 1664} y={stampY + 28} style="font-family:'DINish', sans-serif; font-size: 14px; font-weight: 700; fill: #64748b; letter-spacing: 0.05em;">
+              POKYNY K TISKU A OŘEZU
+            </text>
+            <text x={stampX + 1664} y={stampY + 56} style="font-family:'DINish', sans-serif; font-size: 17px; font-weight: 700; fill: #0f172a;">
+              Měřítko tisku: 100 % (Skutečná velikost / Bez okrajů)
+            </text>
+            <text x={stampX + 1664} y={stampY + 82} style="font-family:'DINish', sans-serif; font-size: 15px; fill: #475569;">
+              Šablona: {templateRenderMode === 'cut-strips' ? 'Čisté pásy (pouze ořez)' : 'Kompletní modul'} • {printColumn === 'all' ? `Všechny sloupce (1–${layout.columns.length})` : `Sloupec ${printColumn}`}
             </text>
           </g>
         {/if}

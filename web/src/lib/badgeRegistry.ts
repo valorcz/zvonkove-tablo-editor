@@ -134,10 +134,11 @@ export function getBadgeLayoutTextMetrics(
   slotTop: number,
   slotBottom: number,
   slotRight: number,
-  textPaddingLeft: number
+  textPaddingLeft: number,
+  slotLeftParam?: number
 ): { textX: number; maxTextWidth: number; badgeCx: number; badgeCy: number } {
-  const slotLeft = colX + 129.54;
-  const badgeCx = colX + 650.0;
+  const slotLeft = slotLeftParam !== undefined ? slotLeftParam : colX + 129.54;
+  const badgeCx = slotRight - 54.0;
   const badgeCy = (slotTop + slotBottom) / 2.0;
 
   if (position === 'none' || position === 'watermark') {
@@ -167,14 +168,14 @@ export function getBadgeLayoutTextMetrics(
     return {
       textX,
       maxTextWidth: slotRight - rightMargin - textX,
-      badgeCx: colX + 675.0,
+      badgeCx: slotRight - 29.0,
       badgeCy: slotTop + 34.0,
     };
   }
 
   // right-center (classic, circle, inline-num)
   const textX = slotLeft + textPaddingLeft;
-  const rightBoundary = shape === 'none' ? 620.0 : 604.0;
+  const rightBoundary = shape === 'none' ? slotRight - 84.0 : slotRight - 100.0;
   return {
     textX,
     maxTextWidth: rightBoundary - textX,
@@ -195,6 +196,8 @@ export function buildBadgeGeometry(params: {
   slotCenterY: number;
   badgeColor: string;
   numeralFontFamily: string;
+  slotLeft?: number;
+  slotRight?: number;
 }): RenderedBadgeData {
   const {
     id,
@@ -209,12 +212,15 @@ export function buildBadgeGeometry(params: {
     numeralFontFamily,
   } = params;
 
+  const slotLeft = params.slotLeft ?? colX + 129.54;
+  const slotRight = params.slotRight ?? colX + 703.96;
+
   if (position === 'none') {
     return { id, idStr, shapes: [], text: null };
   }
 
   if (position === 'left-block') {
-    const blockX = colX + 129.54;
+    const blockX = slotLeft;
     const blockW = 76.0;
     const blockH = slotBottom - slotTop;
     return {
@@ -261,7 +267,7 @@ export function buildBadgeGeometry(params: {
       shapes: [],
       text: {
         text: idStr,
-        x: colX + 636.0,
+        x: (slotLeft + slotRight) / 2.0,
         y: slotCenterY + 28.0,
         fontSize: 84,
         fontWeight: 800,
@@ -275,14 +281,14 @@ export function buildBadgeGeometry(params: {
 
   if (position === 'corner-index') {
     const shapes: BadgeShapeItem[] = [];
-    let textX = colX + 675.0;
+    let textX = slotRight - 29.0;
     let textY = slotTop + 34.0;
     let fontSize = 26;
 
     if (shape === 'badge') {
       const bw = 46.0;
       const bh = 32.0;
-      const bx = colX + 703.96 - bw - 4.0;
+      const bx = slotRight - bw - 4.0;
       const by = slotTop + 6.0;
       shapes.push({
         type: 'rect',
@@ -316,7 +322,7 @@ export function buildBadgeGeometry(params: {
   }
 
   // right-center
-  const cx = colX + 650.0;
+  const cx = slotRight - 54.0;
   const cy = slotCenterY;
   const shapes: BadgeShapeItem[] = [];
 

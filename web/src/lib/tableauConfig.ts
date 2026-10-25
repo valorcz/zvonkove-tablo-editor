@@ -12,7 +12,7 @@ import type {
   SlotMapping,
   PresetDefinition,
 } from './types';
-import { ALL_TABLEAU_PRESETS } from './hardwareProfiles';
+import { ALL_TABLEAU_PRESETS, type HardwareSystem } from './hardwareProfiles';
 import { decodeBadgeStyle, getBadgeLayoutTextMetrics } from './badgeRegistry';
 
 // A4 Landscape 300 DPI canvas
@@ -318,25 +318,45 @@ export function getSlotCoordinates(
   row: number,
   styleId: BadgeStyleId = 'classic',
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
-  colOrigins: number[] = COL_ORIGINS_X
+  colOrigins: number[] = COL_ORIGINS_X,
+  system?: HardwareSystem
 ): SlotCoordinates {
-  const slotTop = (IMAGE_SLOT_TOP_0 + row * IMAGE_SLOT_STEP) * SCALE_Y + OFFSET_Y;
-  const slotBottom = slotTop + IMAGE_SLOT_HEIGHT * SCALE_Y;
+  const btnPlacement = system?.module?.button?.placement || 'left';
+  const btnWidthPx = (system?.module?.button?.widthMm || 10.97) * PX_PER_MM;
+  const slotWidthPx = (system?.slot?.widthMm || 48.63) * PX_PER_MM;
+  const slotStepPx = (system?.module?.slotStepMm || 15.88) * PX_PER_MM;
+  const slotHeightPx = (system?.slot?.heightMm || 12.90) * PX_PER_MM;
+
+  const slotTop = OFFSET_Y + (IMAGE_SLOT_TOP_0 * SCALE_Y) + row * slotStepPx;
+  const slotBottom = slotTop + slotHeightPx;
   const slotCenterY = (slotTop + slotBottom) / 2.0;
   const colX = colOrigins[col] !== undefined ? colOrigins[col] : (COL_ORIGINS_X[col] || 275.151);
-  const { textLeftPadding } = getStyleMetrics(styleId, textPaddingLeft);
-  const textX = colX + textLeftPadding;
+
+  const slotLeft = btnPlacement === 'left' ? colX + btnWidthPx : colX;
+  const slotRight = slotLeft + slotWidthPx;
+
+  const { position, shape } = decodeBadgeStyle(styleId);
+  const metrics = getBadgeLayoutTextMetrics(
+    position,
+    shape,
+    colX,
+    slotTop,
+    slotBottom,
+    slotRight,
+    textPaddingLeft,
+    slotLeft
+  );
 
   return {
     col,
     row,
     colX,
-    textX,
+    textX: metrics.textX,
     slotTop,
     slotBottom,
     slotCenterY,
-    badgeCx: colX + BADGE_OFFSET_X,
-    badgeCy: slotCenterY,
+    badgeCx: metrics.badgeCx,
+    badgeCy: metrics.badgeCy,
   };
 }
 

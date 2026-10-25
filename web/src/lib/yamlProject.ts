@@ -5,6 +5,7 @@ import type {
   FlatEntry,
   TableauLayoutConfig,
   ColumnConfig,
+  TemplateRenderMode,
 } from './types';
 import { getDefaultLayout } from './tableauConfig';
 
@@ -17,6 +18,8 @@ export interface TableauAppSettings {
   textPaddingLeft: number;
   showCropMarks: boolean;
   showScale: boolean;
+  showDimensions?: boolean;
+  templateRenderMode?: TemplateRenderMode;
   printColumn?: PrintColumnOption;
   numeralFontMode?: NumeralFontMode;
 }
@@ -78,8 +81,12 @@ export function serializeProjectYAML(
   lines.push(`  textPaddingLeft: ${settings.textPaddingLeft}`);
   lines.push(`  # Rohové ořezové značky pro pravítko / řezačku (true / false)`);
   lines.push(`  showCropMarks: ${settings.showCropMarks}`);
-  lines.push(`  # Tiskové kalibrační pravítko 100mm v dolním okraji (true / false)`);
+  lines.push(`  # Tiskové kalibrační pravítko 100mm a technické razítko (true / false)`);
   lines.push(`  showScale: ${settings.showScale}`);
+  lines.push(`  # Kótované architektonické rozměry u 1. sloupce (true / false)`);
+  lines.push(`  showDimensions: ${settings.showDimensions ?? false}`);
+  lines.push(`  # Režim šablony: full (kompletní modul s tlačítky) | cut-strips (čisté pásy k ořezu)`);
+  lines.push(`  templateRenderMode: ${settings.templateRenderMode || 'full'}`);
   lines.push(`  # Rozsah tisku: all = všechny sloupce, 1 = sloupec 1, 2 = sloupec 2...`);
   lines.push(`  printColumn: ${settings.printColumn ?? 'all'}`);
 
@@ -118,6 +125,8 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
         textPaddingLeft: parsed.textPaddingLeft || parsed.settings?.textPaddingLeft,
         showCropMarks: parsed.showCropMarks ?? parsed.settings?.showCropMarks,
         showScale: parsed.showScale ?? parsed.settings?.showScale,
+        showDimensions: parsed.showDimensions ?? parsed.settings?.showDimensions,
+        templateRenderMode: parsed.templateRenderMode || parsed.settings?.templateRenderMode || 'full',
         printColumn: parsed.printColumn || parsed.settings?.printColumn,
         numeralFontMode: parsed.numeralFontMode || parsed.settings?.numeralFontMode || 'iosevka',
       };

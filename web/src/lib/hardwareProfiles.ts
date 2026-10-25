@@ -7,12 +7,19 @@ export interface HardwareSlotConfig {
   cornerRadiusMm?: number;
 }
 
+export interface HardwareButtonConfig {
+  placement: 'left' | 'right' | 'none';
+  widthMm: number;
+}
+
 export interface HardwareModuleConfig {
   name: string;
   capacities: number[];
   slotStepMm: number;
+  moduleWidthMm?: number;
   headerMarginMm?: number;
   footerMarginMm?: number;
+  button?: HardwareButtonConfig;
 }
 
 export interface HardwareFrameConfig {
@@ -44,6 +51,9 @@ export function parseHardwareProfiles(yamlText: string): HardwareManufacturer[] 
   let curSys: HardwareSystem | null = null;
   let curPreset: PresetDefinition | null = null;
   let inColumns = false;
+  let inModule = false;
+  let inButton = false;
+  let inSlot = false;
 
   for (let rawLine of lines) {
     const trimmed = rawLine.trim();
@@ -54,6 +64,9 @@ export function parseHardwareProfiles(yamlText: string): HardwareManufacturer[] 
     // Manufacturer level: - id: ...
     if (trimmed.startsWith('- id:') && indent <= 4) {
       inColumns = false;
+      inModule = false;
+      inButton = false;
+      inSlot = false;
       const mId = trimmed.replace('- id:', '').trim().replace(/['"]/g, '');
       curMfr = { id: mId, name: mId, systems: [] };
       manufacturers.push(curMfr);
@@ -70,11 +83,21 @@ export function parseHardwareProfiles(yamlText: string): HardwareManufacturer[] 
     // System level: - id: ... inside systems
     if (curMfr && trimmed.startsWith('- id:') && indent >= 6 && indent <= 8) {
       inColumns = false;
+      inModule = false;
+      inButton = false;
+      inSlot = false;
       const sId = trimmed.replace('- id:', '').trim().replace(/['"]/g, '');
       curSys = {
         id: sId,
         name: sId,
-        slot: { widthMm: 48.6, heightMm: 12.9 },
+        slot: { widthMm: 48.6, heightMm: 12.9, cornerRadiusMm: 1.0 },
+        module: {
+          name: '',
+          capacities: [10],
+          slotStepMm: 15.88,
+          moduleWidthMm: 61.6,
+          button: { placement: 'left', widthMm: 11.0 },
+        },
         presets: [],
       };
       curMfr.systems.push(curSys);
@@ -87,18 +110,62 @@ export function parseHardwareProfiles(yamlText: string): HardwareManufacturer[] 
       continue;
     }
 
-    if (curSys && trimmed.startsWith('widthMm:')) {
-      curSys.slot.widthMm = parseFloat(trimmed.replace('widthMm:', '').trim());
+    if (curSys && trimmed === 'slot:') {
+      inSlot = true;
+      inModule = false;
+      inButton = false;
       continue;
     }
-    if (curSys && trimmed.startsWith('heightMm:')) {
-      curSys.slot.heightMm = parseFloat(trimmed.replace('heightMm:', '').trim());
+    if (curSys && trimmed === 'module:') {
+      inModule = true;
+      inSlot = false;
+      inButton = false;
       continue;
+    }
+    if (inModule && trimmed === 'button:') {
+      inButton = true;
+      continue;
+    }
+
+    if (inSlot && curSys) {
+      if (trimmed.startsWith('widthMm:')) {
+        curSys.slot.widthMm = parseFloat(trimmed.replace('widthMm:', '').trim());
+      } else if (trimmed.startsWith('heightMm:')) {
+        curSys.slot.heightMm = parseFloat(trimmed.replace('heightMm:', '').trim());
+      } else if (trimmed.startsWith('cornerRadiusMm:')) {
+        curSys.slot.cornerRadiusMm = parseFloat(trimmed.replace('cornerRadiusMm:', '').trim());
+      }
+    }
+
+    if (inModule && curSys?.module) {
+      if (inButton && curSys.module.button) {
+        if (trimmed.startsWith('placement:')) {
+          curSys.module.button.placement = trimmed.replace('placement:', '').trim().replace(/['"]/g, '') as any;
+        } else if (trimmed.startsWith('widthMm:')) {
+          curSys.module.button.widthMm = parseFloat(trimmed.replace('widthMm:', '').trim());
+        }
+      } else {
+        if (trimmed.startsWith('name:')) {
+          curSys.module.name = trimmed.replace('name:', '').trim().replace(/['"]/g, '');
+        } else if (trimmed.startsWith('slotStepMm:')) {
+          curSys.module.slotStepMm = parseFloat(trimmed.replace('slotStepMm:', '').trim());
+        } else if (trimmed.startsWith('moduleWidthMm:')) {
+          curSys.module.moduleWidthMm = parseFloat(trimmed.replace('moduleWidthMm:', '').trim());
+        } else if (trimmed.startsWith('capacities:')) {
+          const match = trimmed.match(/\[(.*?)\]/);
+          if (match) {
+            curSys.module.capacities = match[1].split(',').map((x) => parseInt(x.trim(), 10)).filter(Boolean);
+          }
+        }
+      }
     }
 
     // Preset level: - id: ... inside presets
     if (curSys && trimmed.startsWith('- id:') && indent >= 10) {
       inColumns = false;
+      inModule = false;
+      inButton = false;
+      inSlot = false;
       const pId = trimmed.replace('- id:', '').trim().replace(/['"]/g, '') as TableauPresetId;
       curPreset = {
         id: pId,
@@ -155,3 +222,22 @@ export const HARDWARE_MANUFACTURERS = parseHardwareProfiles(hardwareProfilesYaml
 export const ALL_TABLEAU_PRESETS: PresetDefinition[] = HARDWARE_MANUFACTURERS.flatMap((m) =>
   m.systems.flatMap((s) => s.presets)
 );
+
+// Retrieve manufacturer and system for a specific preset ID
+export function getHardwareProfileForPreset(presetId: TableauPresetId): {
+  manufacturer: HardwareManufacturer;
+  system: HardwareSystem;
+} {
+  for (const m of HARDWARE_MANUFACTURERS) {
+    for (const s of m.systems) {
+      if (s.presets.some((p) => p.id === presetId)) {
+        return { manufacturer: m, system: s };
+      }
+    }
+  }
+  // Default fallback: Tesla GUARD prima
+  return {
+    manufacturer: HARDWARE_MANUFACTURERS[0],
+    system: HARDWARE_MANUFACTURERS[0].systems[0],
+  };
+}
