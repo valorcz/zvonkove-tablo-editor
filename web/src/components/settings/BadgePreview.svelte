@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { BadgeStyleId } from '../../lib/types';
+  import type { BadgeStyleId, NumeralFontMode } from '../../lib/types';
   import {
     getSlotCoordinates,
     calculateFontSize,
@@ -14,6 +14,7 @@
     isBold = true,
     showIds = false,
     textPaddingLeft = 88.5,
+    numeralFontMode = 'iosevka',
     onClose = () => {},
   }: {
     badgeStyle: BadgeStyleId;
@@ -22,12 +23,19 @@
     isBold: boolean;
     showIds: boolean;
     textPaddingLeft: number;
+    numeralFontMode?: NumeralFontMode;
     onClose?: () => void;
   } = $props();
 
   const sampleSlotW = 574.42;
   const sampleSlotH = 152.4;
   const sampleNames = ['Jan Novák', 'Marie Nováková'];
+
+  const numeralFontFamily = $derived(
+    numeralFontMode === 'inherit'
+      ? currentFontOption.fontFamily
+      : "'Iosevka-Fixed-Bold', monospace"
+  );
 
   const sampleMetrics = $derived.by(() => {
     const coords = getSlotCoordinates(0, 0, badgeStyle, textPaddingLeft);
@@ -105,21 +113,35 @@
         {#if badgeStyle === 'left-block'}
           <rect x="0" y="0" width="76" height={sampleSlotH} fill={badgeColor} />
           <line x1="76" y1="0" x2="76" y2={sampleSlotH} stroke="#cbd5e1" stroke-width="2" />
-          <text x="38" y="{sampleMetrics.relCenterY + 14}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', monospace;font-weight:700;font-size:42px;fill:#000000;">
+          <text x="38" y="{sampleMetrics.relCenterY + 14}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 42px; fill: #000000;">
             01
           </text>
         {:else if badgeStyle === 'inline-num'}
-          <text x="{sampleSlotW - 39}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', monospace;font-weight:700;font-size:36px;fill:#000000;">
+          <text x="{sampleSlotW - 39}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 36px; fill: #000000;">
+            01
+          </text>
+        {:else if badgeStyle === 'corner-index'}
+          <text x="{sampleSlotW - 24}px" y="34px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 26px; fill: #000000;">
+            01
+          </text>
+        {:else if badgeStyle === 'circle'}
+          <circle cx="{sampleSlotW - 24 - 31}px" cy="{sampleMetrics.relCenterY}px" r="27px" fill={badgeColor} />
+          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
+            01
+          </text>
+        {:else if badgeStyle === 'outline'}
+          <rect x="{sampleSlotW - 24 - 62}px" y="{(sampleSlotH - 54) / 2}px" width="62" height="54" rx="8" fill="none" stroke={badgeColor} stroke-width="2.5" />
+          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
             01
           </text>
         {:else if badgeStyle === 'watermark'}
-          <text x="{sampleSlotW - 68}px" y="{sampleMetrics.relCenterY + 28}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', monospace;font-weight:800;font-size:84px;fill:{sampleMetrics.wmFill};opacity:{sampleMetrics.wmOpacity};">
+          <text x="{sampleSlotW - 68}px" y="{sampleMetrics.relCenterY + 28}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 84px; fill: {sampleMetrics.wmFill}; opacity: {sampleMetrics.wmOpacity};">
             01
           </text>
         {:else}
           <!-- Classic badge -->
           <rect x="{sampleSlotW - 24 - 62}px" y="{(sampleSlotH - 54) / 2}px" width="62" height="54" rx="8" fill={badgeColor} />
-          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', monospace;font-weight:700;font-size:38px;fill:#000000;">
+          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
             01
           </text>
         {/if}

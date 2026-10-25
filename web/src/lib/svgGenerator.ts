@@ -1,4 +1,4 @@
-import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from './types';
+import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from './types';
 import {
   COL_ORIGINS_X,
   SVG_VIEWBOX,
@@ -49,7 +49,8 @@ export function generateFullSVG(
   showCropMarks = true,
   textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
   printColumn: PrintColumnOption = 'all',
-  layout?: TableauLayoutConfig
+  layout?: TableauLayoutConfig,
+  numeralFontMode: NumeralFontMode = 'iosevka'
 ): string {
   const activeLayout = layout || getDefaultLayout();
   const colOrigins = computeColumnOrigins(activeLayout);
@@ -59,6 +60,7 @@ export function generateFullSVG(
   let badgesXml = '';
 
   const fontWeight = isBold ? (fontOption.id === 'Iosevka' ? 600 : 700) : 400;
+  const numFont = numeralFontMode === 'inherit' ? fontOption.fontFamily : "'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace";
 
   for (const slot of mappings) {
     const col = slot.colIndex;
@@ -104,20 +106,44 @@ export function generateFullSVG(
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
       badgesXml += `            <rect x="${blockX.toFixed(2)}px" y="${blockY.toFixed(2)}px" width="${blockW.toFixed(2)}px" height="${blockH.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
       badgesXml += `            <line x1="${divX.toFixed(2)}" y1="${blockY.toFixed(2)}" x2="${divX.toFixed(2)}" y2="${coords.slotBottom.toFixed(2)}" stroke="#cbd5e1" stroke-width="2"/>\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:42px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:42px;fill:#000000;">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'inline-num') {
       const textX = coords.colX + 665.0;
       const textY = coords.slotCenterY + 13.0;
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:36px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:36px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'corner-index') {
+      const textX = coords.colX + 675.0;
+      const textY = coords.slotTop + 34.0;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:26px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'circle') {
+      const cx = coords.badgeCx;
+      const cy = coords.badgeCy;
+      const badgeTextY = cy + 13.0;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <circle cx="${cx.toFixed(2)}px" cy="${cy.toFixed(2)}px" r="27px" style="fill:${badgeColor};"/>\n`;
+      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `        </g>\n`;
+    } else if (badgeStyle === 'outline') {
+      const cx = coords.badgeCx;
+      const cy = coords.badgeCy;
+      const rectX = cx - BADGE_WIDTH / 2.0;
+      const rectY = cy - BADGE_HEIGHT / 2.0;
+      const badgeTextY = cy + 13.0;
+      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
+      badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:none;stroke:${badgeColor};stroke-width:2.5;"/>\n`;
+      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'watermark') {
       const textX = coords.colX + 636.0;
       const textY = coords.slotCenterY + 28.0;
       const wm = getWatermarkStyle(badgeColor);
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:800;font-size:84px;fill:${wm.fill};opacity:${wm.opacity};">${idStr}</text>\n`;
+      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:800;font-size:84px;fill:${wm.fill};opacity:${wm.opacity};">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     } else if (badgeStyle === 'classic') {
       const cx = coords.badgeCx;
@@ -128,7 +154,7 @@ export function generateFullSVG(
 
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
       badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
-      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:'Iosevka-Fixed-Bold', 'Iosevka Fixed', monospace;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
+      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
       badgesXml += `        </g>\n`;
     }
   }

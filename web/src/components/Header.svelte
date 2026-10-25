@@ -1,6 +1,6 @@
 <script lang="ts">
   import BatchImportModal from './BatchImportModal.svelte';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
   import {
@@ -23,6 +23,7 @@
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
     printColumn = $bindable('all'),
     layout = $bindable(getDefaultLayout()),
+    numeralFontMode = 'iosevka',
     onToggleSettings = () => {},
     isSettingsOpen = false,
   }: {
@@ -37,6 +38,7 @@
     textPaddingLeft?: number;
     printColumn?: PrintColumnOption;
     layout?: TableauLayoutConfig;
+    numeralFontMode?: NumeralFontMode;
     onToggleSettings?: () => void;
     isSettingsOpen?: boolean;
   } = $props();
@@ -81,7 +83,8 @@
       showCropMarks,
       textPaddingLeft,
       printColumn,
-      layout
+      layout,
+      numeralFontMode
     );
     const date = new Date().toISOString().slice(0, 10);
     const suffix = printColumn === 'all' ? '' : `-sloupec${printColumn}`;

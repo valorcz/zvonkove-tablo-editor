@@ -32,7 +32,17 @@ export interface FlatEntry {
   name2: string;
 }
 
-export type BadgeStyleId = 'classic' | 'left-block' | 'inline-num' | 'watermark' | 'none';
+export type BadgeStyleId =
+  | 'classic'
+  | 'outline'
+  | 'circle'
+  | 'left-block'
+  | 'corner-index'
+  | 'inline-num'
+  | 'watermark'
+  | 'none';
+
+export type NumeralFontMode = 'iosevka' | 'inherit';
 
 export type PrintColumnOption = 'all' | number;
 

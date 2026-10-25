@@ -1,15 +1,17 @@
 <script lang="ts">
-  import type { BadgeStyleId } from '../../lib/types';
+  import type { BadgeStyleId, NumeralFontMode } from '../../lib/types';
   import { BADGE_STYLES } from '../../lib/tableauConfig';
 
   let {
     badgeStyle = $bindable('classic'),
     badgeColor = $bindable('#FFE6C7'),
     showIds = $bindable(true),
+    numeralFontMode = $bindable('iosevka'),
   }: {
     badgeStyle: BadgeStyleId;
     badgeColor: string;
     showIds: boolean;
+    numeralFontMode?: NumeralFontMode;
   } = $props();
 
   const colorPresets = [
@@ -31,7 +33,7 @@
         class:active={badgeStyle === s.id}
         onclick={() => {
           badgeStyle = s.id;
-          if (s.id !== 'none') showIds = true;
+          showIds = (s.id !== 'none');
         }}
       >
         <div class="badge-style-header">
@@ -45,9 +47,15 @@
     {/each}
   </div>
 
-  {#if badgeStyle !== 'none' && badgeStyle !== 'inline-num'}
+  {#if badgeStyle !== 'none' && badgeStyle !== 'inline-num' && badgeStyle !== 'corner-index'}
     <div class="form-field" style="margin-top: 1rem;">
-      <span class="field-label">Barva podkladu čísla:</span>
+      <span class="field-label">
+        {badgeStyle === 'outline'
+          ? 'Barva obrysu rámečku:'
+          : badgeStyle === 'watermark'
+          ? 'Odstín vodoznaku:'
+          : 'Barva podkladu čísla:'}
+      </span>
       <div class="color-picker-row">
         <div class="color-input-wrap">
           <input
@@ -73,16 +81,31 @@
     </div>
   {/if}
 
-  <div class="checkbox-row">
-    <label class="custom-checkbox" class:disabled={badgeStyle === 'none'}>
-      <input
-        type="checkbox"
-        bind:checked={showIds}
-        disabled={badgeStyle === 'none'}
-      />
-      <span>Zobrazit čísla bytů na štítcích (Flat IDs)</span>
-    </label>
-  </div>
+  {#if badgeStyle !== 'none'}
+    <div class="form-field" style="margin-top: 1rem;">
+      <span class="field-label">Písmo čísel bytů:</span>
+      <div class="numeral-options-wrap">
+        <button
+          type="button"
+          class="numeral-pill-btn"
+          class:active={numeralFontMode === 'iosevka'}
+          onclick={() => (numeralFontMode = 'iosevka')}
+        >
+          <span class="pill-title">Iosevka (technický monospace)</span>
+          <span class="pill-desc">Rovnoměrná šířka cifer, precizní zarovnání</span>
+        </button>
+        <button
+          type="button"
+          class="numeral-pill-btn"
+          class:active={numeralFontMode === 'inherit'}
+          onclick={() => (numeralFontMode = 'inherit')}
+        >
+          <span class="pill-title">Shodné s písmem jmen</span>
+          <span class="pill-desc">Tabulární číslice ve fontu zvoleném pro příjmení</span>
+        </button>
+      </div>
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -158,7 +181,7 @@
   .form-field {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
+    gap: 0.35rem;
   }
 
   .field-label {
@@ -234,31 +257,45 @@
     box-shadow: 0 2px 4px rgba(0, 0, 0, 0.15);
   }
 
-  .checkbox-row {
-    margin-top: 0.85rem;
-    padding-top: 0.65rem;
-    border-top: 1px solid #f1f5f9;
-  }
-
-  .custom-checkbox {
+  .numeral-options-wrap {
     display: flex;
-    align-items: center;
-    gap: 0.5rem;
+    flex-direction: column;
+    gap: 0.4rem;
+  }
+
+  .numeral-pill-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    padding: 0.5rem 0.65rem;
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    text-align: left;
+  }
+
+  .numeral-pill-btn:hover {
+    background: #f1f5f9;
+    border-color: #94a3b8;
+  }
+
+  .numeral-pill-btn.active {
+    background: #f0f9ff;
+    border-color: #0284c7;
+    box-shadow: 0 0 0 1px #0284c7;
+  }
+
+  .pill-title {
     font-size: 0.8rem;
-    font-weight: 500;
-    color: #334155;
-    cursor: pointer;
+    font-weight: 700;
+    color: #0f172a;
   }
 
-  .custom-checkbox.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
-  .custom-checkbox input[type='checkbox'] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
-    accent-color: #0284c7;
+  .pill-desc {
+    font-size: 0.72rem;
+    color: #64748b;
+    margin-top: 0.1rem;
   }
 </style>

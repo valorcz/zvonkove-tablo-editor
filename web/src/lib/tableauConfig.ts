@@ -51,9 +51,24 @@ export const BADGE_STYLES: BadgeStyleOption[] = [
     description: 'Zaoblený barevný obdélníček s číslem bytu vpravo',
   },
   {
+    id: 'outline',
+    label: 'Obrysový rámeček (jemná linka)',
+    description: 'Jemný obrysový rámeček v barvě akcentu bez plné výplně',
+  },
+  {
+    id: 'circle',
+    label: 'Kruhový medailon (geometrický kruh)',
+    description: 'Geometrický kruh vpravo ve stylu moderní orientační grafiky',
+  },
+  {
     id: 'left-block',
     label: 'Architektonický blok (plná výška vlevo)',
     description: 'Barevný blok přes celou výšku štítku s výrazným číslem a linkou',
+  },
+  {
+    id: 'corner-index',
+    label: 'Decentní horní index (v pravém rohu)',
+    description: 'Malé číslo v pravém horním rohu, uvolňuje střed pro dlouhá jména',
   },
   {
     id: 'inline-num',
@@ -296,12 +311,25 @@ export function getStyleMetrics(
       const maxWidth = Math.max(250.0, rightLimit - startX);
       return { textLeftPadding: startX, maxTextWidth: maxWidth };
     }
+    case 'corner-index': {
+      const startX = slotLeft + textPaddingLeft;
+      const rightLimit = slotRight - 45.0;
+      const maxWidth = Math.max(250.0, rightLimit - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
+    case 'circle': {
+      const startX = slotLeft + textPaddingLeft;
+      const rightLimit = 604.0;
+      const maxWidth = Math.max(250.0, rightLimit - startX);
+      return { textLeftPadding: startX, maxTextWidth: maxWidth };
+    }
     case 'watermark':
     case 'none': {
       const startX = slotLeft + textPaddingLeft;
       const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
       return { textLeftPadding: startX, maxTextWidth: maxWidth };
     }
+    case 'outline':
     case 'classic':
     default: {
       const startX = slotLeft + textPaddingLeft;

@@ -126,7 +126,7 @@
             <span
               class="flat-badge style-{badgeStyle}"
               class:has-custom-num={Boolean(flat.customNumber)}
-              style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' ? 'transparent' : badgeColor}; {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+              style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' || badgeStyle === 'corner-index' || badgeStyle === 'outline' ? 'transparent' : badgeColor}; {badgeStyle === 'outline' ? `border: 2px solid ${badgeColor};` : ''} {badgeStyle === 'circle' ? 'border-radius: 9999px;' : ''} {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
               title="Kliknutím upravíte číslo bytu (aktuálně: {displayNum})"
               onclick={() => editCustomNumber(flat, slot.defaultNumber)}
             >

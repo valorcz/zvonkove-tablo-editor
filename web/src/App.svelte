@@ -11,7 +11,7 @@
     getDefaultLayout,
     getTotalSlots,
   } from './lib/tableauConfig';
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig } from './lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
   const LEGACY_STORAGE_KEYS = [
@@ -33,6 +33,7 @@
     printColumn?: PrintColumnOption;
     layout?: TableauLayoutConfig;
     leftPaneView?: 'names' | 'settings';
+    numeralFontMode?: NumeralFontMode;
   }
 
   function loadInitialState(): StoredState {
@@ -73,6 +74,7 @@
           printColumn: parsed.printColumn || 'all',
           layout: parsedLayout,
           leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
+          numeralFontMode: parsed.numeralFontMode === 'inherit' ? 'inherit' : 'iosevka',
         };
       }
     } catch {
@@ -93,6 +95,7 @@
       printColumn: 'all',
       layout: defaultLayout,
       leftPaneView: 'names',
+      numeralFontMode: 'iosevka',
     };
   }
 
@@ -108,6 +111,7 @@
   let textPaddingLeft: number = $state(initial.textPaddingLeft);
   let printColumn: PrintColumnOption = $state(initial.printColumn || 'all');
   let layout: TableauLayoutConfig = $state(initial.layout || getDefaultLayout());
+  let numeralFontMode: NumeralFontMode = $state(initial.numeralFontMode || 'iosevka');
   let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
   let mobileTab: 'names' | 'settings' | 'preview' = $state(
     initial.leftPaneView === 'settings' ? 'settings' : 'names'
@@ -138,6 +142,7 @@
           printColumn,
           layout,
           leftPaneView,
+          numeralFontMode,
         })
       );
     } catch {
@@ -208,9 +213,10 @@
       bind:showScale
       bind:badgeStyle
       bind:showCropMarks
-      bind:textPaddingLeft
+      textPaddingLeft={textPaddingLeft}
       bind:printColumn
       bind:layout
+      {numeralFontMode}
       onToggleSettings={toggleSettingsFromHeader}
       isSettingsOpen={leftPaneView === 'settings' || mobileTab === 'settings'}
     />
@@ -346,6 +352,7 @@
             bind:showScale
             bind:printColumn
             bind:layout
+            bind:numeralFontMode
             onClose={() => {
               leftPaneView = 'names';
               mobileTab = 'names';
@@ -372,6 +379,7 @@
         {textPaddingLeft}
         {printColumn}
         {layout}
+        {numeralFontMode}
       />
     </div>
   </main>

@@ -1,5 +1,6 @@
 import type {
   BadgeStyleId,
+  NumeralFontMode,
   PrintColumnOption,
   FlatEntry,
   TableauLayoutConfig,
@@ -17,6 +18,7 @@ export interface TableauAppSettings {
   showCropMarks: boolean;
   showScale: boolean;
   printColumn?: PrintColumnOption;
+  numeralFontMode?: NumeralFontMode;
 }
 
 export interface ParsedProjectYAML {
@@ -66,8 +68,10 @@ export function serializeProjectYAML(
   lines.push(`  bold: ${settings.bold}`);
   lines.push(`  # Zobrazit čísla bytů na štítcích (true / false)`);
   lines.push(`  showIds: ${settings.showIds}`);
-  lines.push(`  # Typografický styl čísla: classic | left-block | inline-num | watermark | none`);
+  lines.push(`  # Typografický styl čísla: classic | outline | circle | left-block | corner-index | inline-num | watermark | none`);
   lines.push(`  badgeStyle: ${settings.badgeStyle}`);
+  lines.push(`  # Písmo číslic: iosevka (výchozí) | inherit (shodné s písmem jmen)`);
+  lines.push(`  numeralFontMode: ${settings.numeralFontMode || 'iosevka'}`);
   lines.push(`  # Barva podkladu čísla (např. "#FFE6C7" broskvová, "#DBEAFE" modrá)`);
   lines.push(`  badgeColor: "${settings.badgeColor}"`);
   lines.push(`  # Odsazení textu od levého okraje v bodech (59.0 = 5mm, 88.5 = 7.5mm, 118.0 = 10mm)`);
@@ -115,6 +119,7 @@ export function parseProjectYAML(text: string): ParsedProjectYAML | null {
         showCropMarks: parsed.showCropMarks ?? parsed.settings?.showCropMarks,
         showScale: parsed.showScale ?? parsed.settings?.showScale,
         printColumn: parsed.printColumn || parsed.settings?.printColumn,
+        numeralFontMode: parsed.numeralFontMode || parsed.settings?.numeralFontMode || 'iosevka',
       };
 
       const rawFlats = parsed.flats || parsed.apartments;

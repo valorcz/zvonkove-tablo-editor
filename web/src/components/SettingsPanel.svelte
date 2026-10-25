@@ -4,6 +4,7 @@
     PrintColumnOption,
     FlatEntry,
     TableauLayoutConfig,
+    NumeralFontMode,
   } from '../lib/types';
   import {
     FONT_OPTIONS,
@@ -34,6 +35,7 @@
     showScale = $bindable(true),
     printColumn = $bindable('all'),
     layout = $bindable(getDefaultLayout()),
+    numeralFontMode = $bindable('iosevka'),
     onClose = () => {},
   }: {
     flats?: FlatEntry[];
@@ -47,6 +49,7 @@
     showScale: boolean;
     printColumn?: PrintColumnOption;
     layout?: TableauLayoutConfig;
+    numeralFontMode?: NumeralFontMode;
     onClose?: () => void;
   } = $props();
 
@@ -68,6 +71,7 @@
         showCropMarks,
         showScale,
         printColumn,
+        numeralFontMode,
       },
       flats,
       layout
@@ -87,6 +91,7 @@
       if (typeof s.showCropMarks === 'boolean') showCropMarks = s.showCropMarks;
       if (typeof s.showScale === 'boolean') showScale = s.showScale;
       if (s.printColumn !== undefined) printColumn = s.printColumn;
+      if (s.numeralFontMode) numeralFontMode = s.numeralFontMode;
     }
     if (parsed.layout) {
       layout = {
@@ -118,6 +123,7 @@
     showScale = true;
     printColumn = 'all';
     layout = getDefaultLayout();
+    numeralFontMode = 'iosevka';
   }
 </script>
 
@@ -130,6 +136,7 @@
     {isBold}
     {showIds}
     {textPaddingLeft}
+    {numeralFontMode}
     {onClose}
   />
 
@@ -141,7 +148,7 @@
     <TypographySettings bind:selectedFontId bind:isBold bind:textPaddingLeft />
 
     <!-- Badge Styles & Colors -->
-    <BadgeSettings bind:badgeStyle bind:badgeColor bind:showIds />
+    <BadgeSettings bind:badgeStyle bind:badgeColor bind:showIds bind:numeralFontMode />
 
     <!-- Print Aids & Scope -->
     <PrintSettings bind:showCropMarks bind:showScale bind:printColumn columns={layout.columns} />
