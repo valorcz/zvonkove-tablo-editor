@@ -1,11 +1,14 @@
 <script lang="ts">
-  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from '../lib/types';
+  import BatchImportModal from './BatchImportModal.svelte';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode, TemplateRenderMode, TemplateOutlineStyle } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
   import {
     FONT_OPTIONS,
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
+    getDefaultLayout,
+    getTotalSlots,
   } from '../lib/tableauConfig';
 
   let {
@@ -15,10 +18,15 @@
     selectedFontId = $bindable(),
     isBold = $bindable(),
     showScale = $bindable(),
+    showDimensions = $bindable(false),
+    templateRenderMode = $bindable('full'),
+    templateOutlineStyle = $bindable('dashed-subtle'),
     badgeStyle = $bindable('classic'),
     showCropMarks = $bindable(true),
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
     printColumn = $bindable('all'),
+    layout = $bindable(getDefaultLayout()),
+    numeralFontMode = 'iosevka',
     onToggleSettings = () => {},
     isSettingsOpen = false,
   }: {
@@ -28,10 +36,15 @@
     selectedFontId: string;
     isBold: boolean;
     showScale: boolean;
+    showDimensions?: boolean;
+    templateRenderMode?: TemplateRenderMode;
+    templateOutlineStyle?: TemplateOutlineStyle;
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
     printColumn?: PrintColumnOption;
+    layout?: TableauLayoutConfig;
+    numeralFontMode?: NumeralFontMode;
     onToggleSettings?: () => void;
     isSettingsOpen?: boolean;
   } = $props();
@@ -51,7 +64,7 @@
     reader.onload = (e) => {
       const text = e.target?.result as string;
       if (text) {
-        flats = parseCSV(text);
+        flats = parseCSV(text, getTotalSlots(layout));
       }
     };
     reader.readAsText(file);
@@ -75,7 +88,12 @@
       badgeStyle,
       showCropMarks,
       textPaddingLeft,
-      printColumn
+      printColumn,
+      layout,
+      numeralFontMode,
+      templateRenderMode,
+      templateOutlineStyle,
+      showDimensions
     );
     const date = new Date().toISOString().slice(0, 10);
     const suffix = printColumn === 'all' ? '' : `-sloupec${printColumn}`;
@@ -84,7 +102,6 @@
 
   let showPrintModal = $state(false);
   let showBatchModal = $state(false);
-  let batchInputText = $state('');
 
   function handlePrint() {
     showPrintModal = true;
@@ -96,38 +113,17 @@
   }
 
   function handleOpenBatchModal() {
-    batchInputText = flats
-      .map((f) => {
-        const names = [f.name1.trim(), f.name2.trim()].filter((n) => n.length > 0);
-        return names.join(' / ');
-      })
-      .join('\n');
     showBatchModal = true;
   }
 
-  function handleBatchApply() {
-    const lines = batchInputText
-      .split(/\r?\n/)
-      .map((l) => l.trim());
-
-    const updated = flats.map((f, idx) => {
-      const line = lines[idx] || '';
-      let parts = line.split(/[;/]/).map((p) => p.trim());
-      if (parts.length === 1 && parts[0] === '') parts = [];
-      return {
-        id: f.id,
-        name1: parts[0] || '',
-        name2: parts[1] || '',
-      };
-    });
-
+  function handleBatchApply(updated: FlatEntry[]) {
     flats = updated;
     showBatchModal = false;
   }
 
   function handleReset() {
     if (confirm('Opravdu chcete obnovit výchozí vzorová jména i nastavení?')) {
-      flats = createDefaultFlats();
+      flats = createDefaultFlats(getTotalSlots(layout));
       selectedFontId = 'TechnicNT';
       isBold = true;
       badgeStyle = 'classic';
@@ -276,61 +272,13 @@
 </header>
 
 <!-- Batch Modal Dialog -->
-{#if showBatchModal}
-  <!-- svelte-ignore a11y_click_events_have_key_events -->
-  <!-- svelte-ignore a11y_no_static_element_interactions -->
-  <div class="modal-backdrop no-print" onclick={() => (showBatchModal = false)}>
-    <div class="modal-card" onclick={(e) => e.stopPropagation()}>
-      <div class="modal-header">
-        <div class="modal-title-wrap">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"></path>
-            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"></rect>
-          </svg>
-          <h3 class="modal-title">Hromadné vložení seznamu jmen</h3>
-        </div>
-        <button
-          type="button"
-          class="modal-close-btn"
-          onclick={() => (showBatchModal = false)}
-          title="Zavřít"
-        >
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-            <line x1="18" y1="6" x2="6" y2="18"></line>
-            <line x1="6" y1="6" x2="18" y2="18"></line>
-          </svg>
-        </button>
-      </div>
-      <div class="modal-body">
-        <p class="modal-lead">
-          Vložte seznam 28 řádků (od bytu 01 do bytu 28). Pro dvě jména na jednom zvonku použijte lomítko nebo středník (např. <code>Jan Novák / Marie Nováková</code>).
-        </p>
-        <textarea
-          class="batch-textarea"
-          rows="12"
-          bind:value={batchInputText}
-          placeholder="Byt 01&#10;Byt 02&#10;Jan Novák / Marie Nováková&#10;..."
-        ></textarea>
-      </div>
-      <div class="modal-footer">
-        <button
-          type="button"
-          class="btn btn-ghost"
-          onclick={() => (showBatchModal = false)}
-        >
-          Zrušit
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary"
-          onclick={handleBatchApply}
-        >
-          Naplnit jmenovky
-        </button>
-      </div>
-    </div>
-  </div>
-{/if}
+<BatchImportModal
+  isOpen={showBatchModal}
+  {flats}
+  totalSlots={getTotalSlots(layout)}
+  onApply={handleBatchApply}
+  onClose={() => (showBatchModal = false)}
+/>
 
 <!-- Print Guidance Modal Dialog -->
 {#if showPrintModal}
@@ -390,32 +338,18 @@
               class:active={printColumn === 'all'}
               onclick={() => (printColumn = 'all')}
             >
-              Všechny (1+2+3)
+              Všechny ({layout.columns.length})
             </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 1}
-              onclick={() => (printColumn = 1)}
-            >
-              Sloupec 1 (01–10)
-            </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 2}
-              onclick={() => (printColumn = 2)}
-            >
-              Sloupec 2 (11–20)
-            </button>
-            <button
-              type="button"
-              class="seg-btn"
-              class:active={printColumn === 3}
-              onclick={() => (printColumn = 3)}
-            >
-              Sloupec 3 (21–28)
-            </button>
+            {#each layout.columns as colCfg, cIdx}
+              <button
+                type="button"
+                class="seg-btn"
+                class:active={printColumn === cIdx + 1}
+                onclick={() => (printColumn = cIdx + 1)}
+              >
+                Sloupec {cIdx + 1}
+              </button>
+            {/each}
           </div>
         </div>
 
@@ -653,38 +587,13 @@
     background: #f8fafc;
   }
 
-  /* Batch & Print specifics */
-  .batch-textarea {
-    width: 100%;
-    box-sizing: border-box;
-    font-family: monospace;
-    font-size: 0.85rem;
-    padding: 0.75rem;
-    border: 1px solid #cbd5e1;
-    border-radius: 6px;
-    resize: vertical;
-    outline: none;
-    line-height: 1.4;
-  }
-
-  .batch-textarea:focus {
-    border-color: #0284c7;
-    box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.15);
-  }
+  /* Print specifics */
 
   .modal-lead {
     margin: 0 0 1rem 0;
     font-size: 0.875rem;
     color: #334155;
     line-height: 1.5;
-  }
-
-  .modal-lead code {
-    background: #f1f5f9;
-    padding: 0.15rem 0.35rem;
-    border-radius: 4px;
-    font-size: 0.82rem;
-    color: #0284c7;
   }
 
   .modal-list {

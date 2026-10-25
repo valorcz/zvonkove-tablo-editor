@@ -1,8 +1,8 @@
-# Zvonkové tablo Tesla / GUARD prima (28 bytů)
+# Zvonkové tablo Tesla / GUARD prima – Univerzální modulární editor
 
-Interaktivní webový editor a generátor tiskových podkladů pro jmenovky zvonkového tabla bytového domu.
+Interaktivní webový editor a generátor tiskových podkladů pro jmenovky zvonkových tabel bytových domů.
 
-Aplikace je navržena pro zvonkové tablo **Tesla / GUARD prima** s 28 byty (3 sloupce: 10 + 10 + 8 zvonků) a umožňuje snadnou editaci jmenovek, import/export CSV, vizuální kontrolu v reálném čase a tisk na formát **A4 na šířku v přesném fyzickém měřítku 1:1**.
+Aplikace je navržena pro zvonková tabla **Tesla / GUARD prima** a podporuje libovolné velikosti domů (od malých tabel s 10 byty, přes standardních 20, 28 či 30 bytů, až po velké domy se 40+ byty a zakázková rozložení). Umožňuje snadnou editaci jmenovek, import/export CSV, plnou zálohu do YAML, vizuální kontrolu v reálném čase a tisk na formát **A4 na šířku v přesném fyzickém měřítku 1:1**.
 
 ---
 
@@ -17,6 +17,20 @@ Stačí otevřít soubor [`zvonky-editor.html`](zvonky-editor.html) v libovolné
 ## ✨ Klíčové funkce
 
 - **100% samostatná offline aplikace ([`zvonky-editor.html`](zvonky-editor.html))**: Žádné externí závislosti, žádné CDN – všechna písma a skripty jsou vloženy přímo do jednoho HTML souboru.
+- **Univerzální modulární systém a přednastavené presety**:
+  - Podpora pro libovolná zvonková tabla od 1 do 6 sloupců.
+  - **Přednastavené presety**:
+    - **Tesla GUARD prima – 28 bytů** (10 + 10 + 8 zvonků – výchozí stav pro náš dům).
+    - **Tesla GUARD prima – 10 bytů** (1 modul TT10).
+    - **Tesla GUARD prima – 20 bytů** (2 moduly TT10).
+    - **Tesla GUARD prima – 30 bytů** (3 moduly TT10).
+    - **Tesla GUARD prima – 40 bytů** (4 moduly TT10).
+    - **Vlastní rozložení (Custom)**: libovolný počet sloupců, volba kapacity modulů (TT10 vs. TT5) a vynechání zaslepených slotů nahoře či dole.
+  - **Volitelný směr číslování**: *Zdola nahoru* (Tesla standard: byt 01 v přízemí), *Shora dolů*, nebo *Po řádcích zleva doprava*.
+  - **Počáteční číslo bytu** a možnost přepsat číslo/popisek u kteréhokoliv zvonku přímo v tabulce kliknutím na štítek (např. *„12B“*, *„Správce“*, *„Výtah“*).
+- **Dva tiskové režimy**:
+  - **Fyzický rám (1:1 rozteče rámu)**: Sloupce jsou rozmístěny s přesnými mezerami odpovídajícími fyzickému tělu tabla pro přímou kontrolu.
+  - **Úsporný tisk modulů (Nesting)**: Seřadí svislé proužky těsně vedle sebe, což umožní vytisknout **až 4–5 modulů (40–50 jmenovek) na jediný list A4**.
 - **Čistá vektorová grafika**: Původní rastrový podklad byl kompletně nahrazen přesnými vektorovými prvky (`<rect>`). Ořezové linky i rámečky jsou dokonale ostré na jakékoliv tiskárně.
 - **Písma přímo v balíčku s plnou českou diakritikou**:
   - **Technic NT** (z písmolijny FI MUNI) – technické normalizované písmo vycházející z ČSN, výchozí volba pro čistý industriální vzhled tabla.

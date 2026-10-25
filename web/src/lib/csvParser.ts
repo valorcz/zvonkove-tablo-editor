@@ -1,16 +1,72 @@
 import type { FlatEntry } from './types';
 
+const SAMPLE_SURNAMES: [string, string][] = [
+  ['Nováková', ''],
+  ['Svobodovi', ''],
+  ['Novotný', ''],
+  ['Dvořákovi', ''],
+  ['Černý', 'Černá'],
+  ['Procházkovi', ''],
+  ['Kučerovi', ''],
+  ['Veselý', ''],
+  ['Horákovi', ''],
+  ['Němcovi', ''],
+  ['Ing. Marek', ''],
+  ['Pospíšilovi', ''],
+  ['Pokorný', ''],
+  ['J. Král', 'M. Králová'],
+  ['Růžičkovi', ''],
+  ['Beneš', ''],
+  ['Fialovi', ''],
+  ['Sedláčkovi', ''],
+  ['Doležalovi', ''],
+  ['Zemanovi', ''],
+  ['Kolářová', ''],
+  ['Navrátil', 'Čermáková'],
+  ['Vaněk', ''],
+  ['Urbanová', ''],
+  ['Blažková', ''],
+  ['Křížová', ''],
+  ['Kovářová', ''],
+  ['Bartošová', ''],
+  ['Vlčkovi', ''],
+  ['Polákovi', ''],
+  ['Kopecký', ''],
+  ['Konečný', ''],
+  ['Malý', ''],
+  ['Holubovi', ''],
+  ['Staněk', ''],
+  ['Štěpánkovi', ''],
+  ['Kadlec', ''],
+  ['Dostálová', ''],
+  ['Soukup', ''],
+  ['Marešovi', ''],
+];
+
 /**
- * Parses raw CSV content into 28 FlatEntry items.
+ * Creates default initial flats with fictitious Czech names up to specified count.
  */
-export function parseCSV(csvContent: string): FlatEntry[] {
+export function createDefaultFlats(count = 28): FlatEntry[] {
+  const flats: FlatEntry[] = [];
+  for (let fid = 1; fid <= count; fid++) {
+    const idx = (fid - 1) % SAMPLE_SURNAMES.length;
+    const [name1, name2] = SAMPLE_SURNAMES[idx] || ['', ''];
+    flats.push({ id: fid, name1, name2 });
+  }
+  return flats;
+}
+
+/**
+ * Parses raw CSV content into FlatEntry items.
+ */
+export function parseCSV(csvContent: string, expectedCount = 28): FlatEntry[] {
   const lines = csvContent
     .split(/\r?\n/)
     .map((l) => l.trim())
     .filter((l) => l.length > 0);
 
   if (lines.length === 0) {
-    return createDefaultFlats();
+    return createDefaultFlats(expectedCount);
   }
 
   // Detect delimiter: comma, semicolon, tab, pipe
@@ -28,7 +84,6 @@ export function parseCSV(csvContent: string): FlatEntry[] {
   }
 
   const parseRow = (line: string): string[] => {
-    // Simple CSV parser supporting double quotes
     const result: string[] = [];
     let current = '';
     let inQuotes = false;
@@ -61,15 +116,16 @@ export function parseCSV(csvContent: string): FlatEntry[] {
   );
   const dataRows = hasHeader ? rows.slice(1) : rows;
 
-  const namesMap = new Map<number, string[]>();
+  const namesMap = new Map<number, { names: string[]; customNumber?: string }>();
+  let maxFoundId = 0;
 
-  for (const row of dataRows) {
+  for (let rIdx = 0; rIdx < dataRows.length; rIdx++) {
+    const row = dataRows[rIdx];
     if (row.length === 0) continue;
     const rawId = row[0];
     const match = rawId.match(/\d+/);
-    if (!match) continue;
-    const flatId = parseInt(match[0], 10);
-    if (flatId < 1 || flatId > 28) continue;
+    const flatId = match ? parseInt(match[0], 10) : rIdx + 1;
+    if (flatId > maxFoundId) maxFoundId = flatId;
 
     // Names field (row[1] or joined remaining columns)
     const rawNames = row.slice(1).join(';');
@@ -79,17 +135,20 @@ export function parseCSV(csvContent: string): FlatEntry[] {
       .map((n) => n.trim())
       .filter((n) => n.length > 0);
 
-    const existing = namesMap.get(flatId) || [];
-    namesMap.set(flatId, existing.concat(parsedNames));
+    const existing = namesMap.get(flatId)?.names || [];
+    const customNumber = match ? undefined : (rawId || undefined);
+    namesMap.set(flatId, { names: existing.concat(parsedNames), customNumber });
   }
 
+  const finalCount = Math.max(expectedCount, maxFoundId);
   const result: FlatEntry[] = [];
-  for (let fid = 1; fid <= 28; fid++) {
-    const list = namesMap.get(fid) || [];
+  for (let fid = 1; fid <= finalCount; fid++) {
+    const entry = namesMap.get(fid);
     result.push({
       id: fid,
-      name1: list[0] || '',
-      name2: list[1] || '',
+      customNumber: entry?.customNumber,
+      name1: entry?.names[0] || '',
+      name2: entry?.names[1] || '',
     });
   }
 
@@ -97,7 +156,7 @@ export function parseCSV(csvContent: string): FlatEntry[] {
 }
 
 /**
- * Formats 28 FlatEntry items into a CSV string.
+ * Formats FlatEntry items into a CSV string.
  */
 export function exportToCSV(flats: FlatEntry[]): string {
   const lines = ['flat_id,names'];
@@ -107,55 +166,12 @@ export function exportToCSV(flats: FlatEntry[]): string {
     if (f.name2.trim()) names.push(f.name2.trim());
 
     const namesStr = names.join('; ');
-    // Quote if contains comma, quote, or semicolon
     const escaped = namesStr.includes(',') || namesStr.includes(';') || namesStr.includes('"')
       ? `"${namesStr.replace(/"/g, '""')}"`
       : namesStr;
 
-    lines.push(`${f.id},${escaped}`);
+    const idLabel = f.customNumber || f.id;
+    lines.push(`${idLabel},${escaped}`);
   }
   return lines.join('\n');
-}
-
-/**
- * Default initial sample flats (fictitious Czech names).
- */
-export function createDefaultFlats(): FlatEntry[] {
-  const initialData: Record<number, [string, string]> = {
-    1: ['Nováková', ''],
-    2: ['Svobodovi', ''],
-    3: ['Novotný', ''],
-    4: ['Dvořákovi', ''],
-    5: ['Černý', 'Černá'],
-    6: ['Procházkovi', ''],
-    7: ['Kučerovi', ''],
-    8: ['Veselý', ''],
-    9: ['Horákovi', ''],
-    10: ['Němcovi', ''],
-    11: ['Ing. Marek', ''],
-    12: ['Pospíšilovi', ''],
-    13: ['Pokorný', ''],
-    14: ['J. Král', 'M. Králová'],
-    15: ['Růžičkovi', ''],
-    16: ['Beneš', ''],
-    17: ['Fialovi', ''],
-    18: ['Sedláčkovi', ''],
-    19: ['Doležalovi', ''],
-    20: ['Zemanovi', ''],
-    21: ['Kolářová', ''],
-    22: ['Navrátil', 'Čermáková'],
-    23: ['Vaněk', ''],
-    24: ['Urbanová', ''],
-    25: ['Blažková', ''],
-    26: ['Křížová', ''],
-    27: ['Kovářová', ''],
-    28: ['Bartošová', ''],
-  };
-
-  const flats: FlatEntry[] = [];
-  for (let fid = 1; fid <= 28; fid++) {
-    const [name1, name2] = initialData[fid] || ['', ''];
-    flats.push({ id: fid, name1, name2 });
-  }
-  return flats;
 }

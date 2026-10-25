@@ -1,0 +1,233 @@
+# Hardware profiles and physical specifications for door entry nameplate panels
+# Rozměry a profily zvonkových tabel různých výrobců
+
+manufacturers:
+  - id: tesla
+    name: "Tesla Stropkov"
+    systems:
+      - id: guard-prima
+        name: "GUARD prima"
+        slot:
+          widthMm: 48.6
+          heightMm: 12.9
+          cornerRadiusMm: 1.0
+        module:
+          name: "TT tlačítkový modul (TT10 / TT5)"
+          capacities: [5, 10]
+          slotStepMm: 15.88
+          moduleWidthMm: 61.6
+          headerMarginMm: 1.3
+          footerMarginMm: 1.3
+          button:
+            placement: "left"
+            widthMm: 11.0
+        frame:
+          columnSpacingMm: 3.5
+          pageFitCapacityA4: 3
+        presets:
+          - id: tesla-guard-28
+            label: "Tesla GUARD prima – 28 bytů (10+10+8)"
+            description: "3 sloupce, 3. sloupec má 8 bytů (horní 2 pozice prázdné), číslování zdola nahoru"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: tesla-guard-30
+            label: "Tesla GUARD prima – 30 bytů (10+10+10)"
+            description: "3 moduly TT10 (10 + 10 + 10 tlačítek), číslování zdola nahoru"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: tesla-guard-20
+            label: "Tesla GUARD prima – 20 bytů (10+10)"
+            description: "2 moduly TT10 (10 + 10 tlačítek), číslování zdola nahoru"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: tesla-guard-10
+            label: "Tesla GUARD prima – 10 bytů (1 sloupec)"
+            description: "1 modul TT10 s 10 tlačítky, číslování zdola nahoru"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: tesla-guard-40
+            label: "Tesla GUARD prima – 40 bytů (4 sloupce)"
+            description: "4 moduly TT10 (10 + 10 + 10 + 10 tlačítek), úsporný tisk modulů"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 4, capacity: 10, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "compact-strips"
+
+  - id: urmet
+    name: "Urmet"
+    systems:
+      - id: sinthesi
+        name: "Sinthesi / Sinthesi S2"
+        slot:
+          widthMm: 55.0
+          heightMm: 14.5
+          cornerRadiusMm: 0.5
+        module:
+          name: "Tlačítkový modul 1148"
+          capacities: [4, 8]
+          slotStepMm: 15.88
+          moduleWidthMm: 75.0
+          headerMarginMm: 2.0
+          footerMarginMm: 2.0
+          button:
+            placement: "right"
+            widthMm: 14.0
+        frame:
+          columnSpacingMm: 5.0
+          pageFitCapacityA4: 3
+        presets:
+          - id: urmet-sinthesi-16
+            label: "Urmet Sinthesi – 16 bytů (8+8)"
+            description: "2 sloupce po 8 tlačítkách, tlačítka vpravo, číslování shora dolů"
+            columns:
+              - { id: 1, capacity: 8, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 8, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: urmet-sinthesi-s2-8
+            label: "Urmet Sinthesi S2 – 8 bytů (4+4)"
+            description: "2 moduly 1148/14 po 4 tlačítkách, tlačítka vpravo, číslování shora dolů"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: urmet-sinthesi-s2-12
+            label: "Urmet Sinthesi S2 – 12 bytů (4+4+4)"
+            description: "3 moduly 1148/14 po 4 tlačítkách, tlačítka vpravo, číslování shora dolů"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+  - id: siedle
+    name: "Siedle"
+    systems:
+      - id: vario-611
+        name: "Vario 611"
+        slot:
+          widthMm: 63.0
+          heightMm: 19.5
+          cornerRadiusMm: 1.0
+        module:
+          name: "Tlačítkový modul TM 612-4"
+          capacities: [2, 3, 4]
+          slotStepMm: 22.0
+          moduleWidthMm: 82.0
+          button:
+            placement: "right"
+            widthMm: 15.0
+        frame:
+          columnSpacingMm: 6.0
+          pageFitCapacityA4: 3
+        presets:
+          - id: siedle-vario-8
+            label: "Siedle Vario 611 – 8 bytů (4+4)"
+            description: "2 moduly TM 612-4 po 4 tlačítkách, velké štítky 63 × 19,5 mm, tlačítka vpravo"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+          - id: siedle-vario-4
+            label: "Siedle Vario 611 – 4 byty (1 sloupec)"
+            description: "1 modul TM 612-4 se 4 tlačítky, velké štítky 63 × 19,5 mm"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+  - id: bticino
+    name: "Bticino"
+    systems:
+      - id: sfera
+        name: "Sfera New / Classic"
+        slot:
+          widthMm: 68.0
+          heightMm: 15.0
+          cornerRadiusMm: 1.5
+        module:
+          name: "Modul 332141 (4 tlačítka)"
+          capacities: [4, 8]
+          slotStepMm: 18.0
+          moduleWidthMm: 88.0
+          button:
+            placement: "right"
+            widthMm: 15.0
+        frame:
+          columnSpacingMm: 6.0
+          pageFitCapacityA4: 3
+        presets:
+          - id: bticino-sfera-8
+            label: "Bticino Sfera – 8 bytů (4+4)"
+            description: "2 moduly po 4 tlačítkách, široké štítky 68 × 15 mm, tlačítka vpravo"
+            columns:
+              - { id: 1, capacity: 4, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 4, skipTop: 0, skipBottom: 0 }
+            numberingDirection: "top-down"
+            startNumber: 1
+            printMode: "frame-1to1"
+
+  - id: custom
+    name: "Vlastní rozložení"
+    systems:
+      - id: modular
+        name: "Univerzální modulární tablo"
+        slot:
+          widthMm: 48.6
+          heightMm: 12.9
+          cornerRadiusMm: 1.0
+        module:
+          name: "Pás jmenovek"
+          capacities: [4, 5, 8, 10]
+          slotStepMm: 15.88
+          moduleWidthMm: 48.6
+          button:
+            placement: "none"
+            widthMm: 0.0
+        presets:
+          - id: custom
+            label: "Vlastní rozložení (Custom)"
+            description: "Uživatelsky nastavený počet sloupců a kapacit tlačítek"
+            columns:
+              - { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 }
+              - { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 }
+            numberingDirection: "bottom-up"
+            startNumber: 1
+            printMode: "frame-1to1"
