@@ -9,7 +9,7 @@
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
   } from './lib/tableauConfig';
-  import type { FlatEntry, BadgeStyleId } from './lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from './lib/types';
 
   const STORAGE_KEY = 'zvonky_tablo_app_state_v1';
   const LEGACY_STORAGE_KEYS = [
@@ -28,6 +28,7 @@
     badgeStyle: BadgeStyleId;
     showCropMarks: boolean;
     textPaddingLeft: number;
+    printColumn?: PrintColumnOption;
     leftPaneView?: 'names' | 'settings';
   }
 
@@ -57,6 +58,7 @@
               typeof parsed.textPaddingLeft === 'number'
                 ? parsed.textPaddingLeft
                 : DEFAULT_TEXT_PADDING_LEFT,
+            printColumn: parsed.printColumn || 'all',
             leftPaneView: parsed.leftPaneView === 'settings' ? 'settings' : 'names',
           };
         }
@@ -74,6 +76,7 @@
       badgeStyle: 'classic',
       showCropMarks: true,
       textPaddingLeft: DEFAULT_TEXT_PADDING_LEFT,
+      printColumn: 'all',
       leftPaneView: 'names',
     };
   }
@@ -88,6 +91,7 @@
   let badgeStyle: BadgeStyleId = $state(initial.badgeStyle);
   let showCropMarks: boolean = $state(initial.showCropMarks);
   let textPaddingLeft: number = $state(initial.textPaddingLeft);
+  let printColumn: PrintColumnOption = $state(initial.printColumn || 'all');
   let leftPaneView: 'names' | 'settings' = $state(initial.leftPaneView || 'names');
   let mobileTab: 'names' | 'settings' | 'preview' = $state(
     initial.leftPaneView === 'settings' ? 'settings' : 'names'
@@ -113,6 +117,7 @@
           badgeStyle,
           showCropMarks,
           textPaddingLeft,
+          printColumn,
           leftPaneView,
         })
       );
@@ -180,6 +185,7 @@
       bind:badgeStyle
       bind:showCropMarks
       bind:textPaddingLeft
+      bind:printColumn
       onToggleSettings={toggleSettingsFromHeader}
       isSettingsOpen={leftPaneView === 'settings' || mobileTab === 'settings'}
     />
@@ -303,6 +309,7 @@
           />
         {:else}
           <SettingsPanel
+            bind:flats
             bind:selectedFontId
             bind:isBold
             bind:badgeStyle
@@ -311,6 +318,7 @@
             bind:textPaddingLeft
             bind:showCropMarks
             bind:showScale
+            bind:printColumn
             onClose={() => {
               leftPaneView = 'names';
               mobileTab = 'names';
@@ -335,6 +343,7 @@
         {badgeStyle}
         {showCropMarks}
         {textPaddingLeft}
+        {printColumn}
       />
     </div>
   </main>

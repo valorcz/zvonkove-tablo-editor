@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { FlatEntry, BadgeStyleId } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from '../lib/types';
   import { parseCSV, exportToCSV, createDefaultFlats } from '../lib/csvParser';
   import { generateFullSVG, downloadFile } from '../lib/svgGenerator';
   import {
@@ -18,6 +18,7 @@
     badgeStyle = $bindable('classic'),
     showCropMarks = $bindable(true),
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
+    printColumn = $bindable('all'),
     onToggleSettings = () => {},
     isSettingsOpen = false,
   }: {
@@ -30,6 +31,7 @@
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
+    printColumn?: PrintColumnOption;
     onToggleSettings?: () => void;
     isSettingsOpen?: boolean;
   } = $props();
@@ -72,10 +74,12 @@
       showScale,
       badgeStyle,
       showCropMarks,
-      textPaddingLeft
+      textPaddingLeft,
+      printColumn
     );
     const date = new Date().toISOString().slice(0, 10);
-    downloadFile(svg, `zvonky-tablo-${date}.svg`, 'image/svg+xml;charset=utf-8;');
+    const suffix = printColumn === 'all' ? '' : `-sloupec${printColumn}`;
+    downloadFile(svg, `zvonky-tablo${suffix}-${date}.svg`, 'image/svg+xml;charset=utf-8;');
   }
 
   let showPrintModal = $state(false);
@@ -376,6 +380,45 @@
             <strong>3. Grafika na pozadí (Background graphics):</strong> zaškrtněte <strong>Povolit</strong>
           </li>
         </ul>
+
+        <div class="print-scope-box">
+          <span class="field-label">Vybrat rozsah pro tisk:</span>
+          <div class="segmented-control print-cols-choice">
+            <button
+              type="button"
+              class="seg-btn"
+              class:active={printColumn === 'all'}
+              onclick={() => (printColumn = 'all')}
+            >
+              Všechny (1+2+3)
+            </button>
+            <button
+              type="button"
+              class="seg-btn"
+              class:active={printColumn === 1}
+              onclick={() => (printColumn = 1)}
+            >
+              Sloupec 1 (01–10)
+            </button>
+            <button
+              type="button"
+              class="seg-btn"
+              class:active={printColumn === 2}
+              onclick={() => (printColumn = 2)}
+            >
+              Sloupec 2 (11–20)
+            </button>
+            <button
+              type="button"
+              class="seg-btn"
+              class:active={printColumn === 3}
+              onclick={() => (printColumn = 3)}
+            >
+              Sloupec 3 (21–28)
+            </button>
+          </div>
+        </div>
+
         <div class="modal-alt-box">
           <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#0284c7" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <circle cx="12" cy="12" r="10"></circle>
@@ -680,6 +723,24 @@
     font-size: 0.8rem;
     color: #0369a1;
     line-height: 1.45;
+  }
+
+  .print-scope-box {
+    margin-bottom: 1.1rem;
+    padding: 0.75rem 0.85rem;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 6px;
+  }
+
+  .print-cols-choice {
+    margin-top: 0.4rem;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(105px, 1fr));
+    gap: 0.25rem;
+    background: #e2e8f0;
+    padding: 0.25rem;
+    border-radius: 6px;
   }
 
   /* Responsive styling for Mobile */

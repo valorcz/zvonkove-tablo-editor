@@ -6,6 +6,8 @@ export interface FlatEntry {
 
 export type BadgeStyleId = 'classic' | 'left-block' | 'inline-num' | 'watermark' | 'none';
 
+export type PrintColumnOption = 'all' | 1 | 2 | 3;
+
 export interface BadgeStyleOption {
   id: BadgeStyleId;
   label: string;

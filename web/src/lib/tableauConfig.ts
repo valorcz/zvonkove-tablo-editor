@@ -1,4 +1,4 @@
-import type { SlotCoordinates, BadgeStyleId, BadgeStyleOption } from './types';
+import type { SlotCoordinates, BadgeStyleId, BadgeStyleOption, PrintColumnOption, FlatEntry } from './types';
 
 // A4 Landscape 300 DPI canvas
 export const SVG_VIEWBOX = '0 0 3508 2481';
@@ -160,59 +160,215 @@ export interface TableauAppSettings {
   textPaddingLeft: number;
   showCropMarks: boolean;
   showScale: boolean;
+  printColumn?: PrintColumnOption;
 }
 
-export function serializeSettingsYAML(settings: TableauAppSettings): string {
-  return [
-    `# Konfigurace zvonkového tabla Tesla / GUARD prima`,
-    `font: ${settings.font}`,
-    `bold: ${settings.bold}`,
-    `badgeStyle: ${settings.badgeStyle}`,
-    `badgeColor: "${settings.badgeColor}"`,
-    `showIds: ${settings.showIds}`,
-    `textPaddingLeft: ${settings.textPaddingLeft}`,
-    `showCropMarks: ${settings.showCropMarks}`,
-    `showScale: ${settings.showScale}`,
-  ].join('\n');
+export interface ParsedProjectYAML {
+  settings?: Partial<TableauAppSettings>;
+  flats?: FlatEntry[];
 }
 
-export function parseSettingsYAML(text: string): Partial<TableauAppSettings> | null {
+export function serializeProjectYAML(
+  settings: TableauAppSettings,
+  flats?: FlatEntry[]
+): string {
+  const lines: string[] = [
+    `# ============================================================`,
+    `# Zvonkové tablo Tesla / GUARD prima – Konfigurace projektu`,
+    `# ============================================================`,
+    `# Tento soubor obsahuje nastavení vzhledu, písma, tiskové parametry`,
+    `# a kompletní seznam jmenovek pro všech 28 bytů.`,
+    `# Lze jej kdykoliv znovu načíst do aplikace zvonky-editor.html.`,
+    ``,
+    `version: 1`,
+    ``,
+    `# --- Nastavení vzhledu a sazby ---`,
+    `settings:`,
+    `  # Písmo: TechnicNT | DIN | FiraSans | Iosevka | Futura | SystemSans`,
+    `  font: ${settings.font}`,
+    `  # Tučný řez písma (true / false)`,
+    `  bold: ${settings.bold}`,
+    `  # Zobrazit čísla bytů na štítcích (true / false)`,
+    `  showIds: ${settings.showIds}`,
+    `  # Typografický styl čísla: classic | left-block | inline-num | watermark | none`,
+    `  badgeStyle: ${settings.badgeStyle}`,
+    `  # Barva podkladu čísla (např. "#FFE6C7" broskvová, "#DBEAFE" modrá)`,
+    `  badgeColor: "${settings.badgeColor}"`,
+    `  # Odsazení textu od levého okraje v bodech (59.0 = 5mm, 88.5 = 7.5mm, 118.0 = 10mm)`,
+    `  textPaddingLeft: ${settings.textPaddingLeft}`,
+    `  # Rohové ořezové značky pro pravítko / řezačku (true / false)`,
+    `  showCropMarks: ${settings.showCropMarks}`,
+    `  # Tiskové kalibrační pravítko 100mm v dolním okraji (true / false)`,
+    `  showScale: ${settings.showScale}`,
+    `  # Rozsah tisku: all = všechny sloupce, 1 = sloupec 1, 2 = sloupec 2, 3 = sloupec 3`,
+    `  printColumn: ${settings.printColumn ?? 'all'}`,
+  ];
+
+  if (flats && flats.length > 0) {
+    lines.push(``);
+    lines.push(`# --- Seznam jmenovek pro byty 01 až 28 ---`);
+    lines.push(`apartments:`);
+    for (const flat of flats) {
+      const idStr = String(flat.id).padStart(2, '0');
+      lines.push(`  - id: "${idStr}"`);
+      lines.push(`    name1: ${JSON.stringify(flat.name1 || '')}`);
+      lines.push(`    name2: ${JSON.stringify(flat.name2 || '')}`);
+    }
+  }
+
+  return lines.join('\n');
+}
+
+export function parseProjectYAML(text: string): ParsedProjectYAML | null {
   try {
     const trimmed = text.trim();
+    if (!trimmed) return null;
+
+    // Support JSON format if supplied
     if (trimmed.startsWith('{')) {
       const parsed = JSON.parse(trimmed);
-      return {
-        font: parsed.font || parsed.selectedFontId,
-        bold: typeof parsed.bold === 'boolean' ? parsed.bold : parsed.isBold,
-        badgeStyle: parsed.badgeStyle,
-        badgeColor: parsed.badgeColor,
-        showIds: parsed.showIds,
-        textPaddingLeft: parsed.textPaddingLeft,
-        showCropMarks: parsed.showCropMarks,
-        showScale: parsed.showScale,
+      const settingsPart: Partial<TableauAppSettings> = {
+        font: parsed.font || parsed.selectedFontId || parsed.settings?.font,
+        bold: typeof parsed.bold === 'boolean' ? parsed.bold : parsed.settings?.bold,
+        badgeStyle: parsed.badgeStyle || parsed.settings?.badgeStyle,
+        badgeColor: parsed.badgeColor || parsed.settings?.badgeColor,
+        showIds: parsed.showIds ?? parsed.settings?.showIds,
+        textPaddingLeft: parsed.textPaddingLeft || parsed.settings?.textPaddingLeft,
+        showCropMarks: parsed.showCropMarks ?? parsed.settings?.showCropMarks,
+        showScale: parsed.showScale ?? parsed.settings?.showScale,
+        printColumn: parsed.printColumn || parsed.settings?.printColumn,
       };
-    }
-    const result: Record<string, any> = {};
-    const lines = trimmed.split(/\r?\n/);
-    for (const line of lines) {
-      const clean = line.replace(/#.*$/, '').trim();
-      if (!clean) continue;
-      const colonIdx = clean.indexOf(':');
-      if (colonIdx === -1) continue;
-      const key = clean.slice(0, colonIdx).trim();
-      let val = clean.slice(colonIdx + 1).trim();
-      if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
-        val = val.slice(1, -1);
+
+      const rawFlats = parsed.flats || parsed.apartments;
+      let flatsPart: FlatEntry[] | undefined;
+      if (Array.isArray(rawFlats)) {
+        flatsPart = rawFlats.map((item: any, idx: number) => {
+          const fid = Number(item.id) || idx + 1;
+          let n1 = String(item.name1 || item.name || '').trim();
+          let n2 = String(item.name2 || '').trim();
+          if (!n2 && (n1.includes('/') || n1.includes(';'))) {
+            const parts = n1.split(/[/;]/).map((s) => s.trim());
+            n1 = parts[0] || '';
+            n2 = parts.slice(1).join(' / ');
+          }
+          return { id: fid, name1: n1, name2: n2 };
+        });
       }
-      if (val === 'true') result[key] = true;
-      else if (val === 'false') result[key] = false;
-      else if (!isNaN(Number(val)) && val !== '') result[key] = Number(val);
-      else result[key] = val;
+
+      return { settings: settingsPart, flats: flatsPart };
     }
-    return result as Partial<TableauAppSettings>;
+
+    // YAML line-based parsing
+    const lines = trimmed.split(/\r?\n/);
+    const settings: Record<string, any> = {};
+    const flats: FlatEntry[] = [];
+    let currentFlat: Partial<FlatEntry> | null = null;
+    let section: 'root' | 'settings' | 'apartments' = 'root';
+
+    for (const rawLine of lines) {
+      const clean = rawLine.replace(/#.*$/, '').trimEnd();
+      const trimmedLine = clean.trim();
+      if (!trimmedLine) continue;
+
+      if (trimmedLine === 'settings:') {
+        section = 'settings';
+        continue;
+      }
+      if (trimmedLine === 'apartments:') {
+        section = 'apartments';
+        continue;
+      }
+
+      if (section === 'apartments') {
+        if (trimmedLine.startsWith('- id:')) {
+          if (currentFlat && currentFlat.id) {
+            flats.push({
+              id: currentFlat.id,
+              name1: currentFlat.name1 || '',
+              name2: currentFlat.name2 || '',
+            });
+          }
+          const idVal = trimmedLine.replace(/^- id:\s*/, '').replace(/["']/g, '').trim();
+          currentFlat = { id: parseInt(idVal, 10) || flats.length + 1, name1: '', name2: '' };
+          continue;
+        }
+
+        if (currentFlat) {
+          const colonIdx = trimmedLine.indexOf(':');
+          if (colonIdx !== -1) {
+            const key = trimmedLine.slice(0, colonIdx).trim();
+            let val = trimmedLine.slice(colonIdx + 1).trim();
+            if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+              try {
+                val = JSON.parse(val);
+              } catch {
+                val = val.slice(1, -1);
+              }
+            }
+            if (key === 'name1') currentFlat.name1 = val;
+            else if (key === 'name2') currentFlat.name2 = val;
+            else if (key === 'name') {
+              if (val.includes('/') || val.includes(';')) {
+                const parts = val.split(/[/;]/).map((s) => s.trim());
+                currentFlat.name1 = parts[0] || '';
+                currentFlat.name2 = parts.slice(1).join(' / ');
+              } else {
+                currentFlat.name1 = val;
+              }
+            }
+          }
+        }
+        continue;
+      }
+
+      // Root or settings key-value pair
+      const colonIdx = trimmedLine.indexOf(':');
+      if (colonIdx !== -1) {
+        const key = trimmedLine.slice(0, colonIdx).trim();
+        let val = trimmedLine.slice(colonIdx + 1).trim();
+        if ((val.startsWith('"') && val.endsWith('"')) || (val.startsWith("'") && val.endsWith("'"))) {
+          try {
+            val = JSON.parse(val);
+          } catch {
+            val = val.slice(1, -1);
+          }
+        }
+        if (val === 'true') settings[key] = true;
+        else if (val === 'false') settings[key] = false;
+        else if (key === 'printColumn') {
+          if (val === '1') settings[key] = 1;
+          else if (val === '2') settings[key] = 2;
+          else if (val === '3') settings[key] = 3;
+          else settings[key] = 'all';
+        } else if (!isNaN(Number(val)) && val !== '') settings[key] = Number(val);
+        else settings[key] = val;
+      }
+    }
+
+    if (currentFlat && currentFlat.id) {
+      flats.push({
+        id: currentFlat.id,
+        name1: currentFlat.name1 || '',
+        name2: currentFlat.name2 || '',
+      });
+    }
+
+    return {
+      settings: settings as Partial<TableauAppSettings>,
+      flats: flats.length > 0 ? flats : undefined,
+    };
   } catch {
     return null;
   }
+}
+
+export function serializeSettingsYAML(settings: TableauAppSettings): string {
+  return serializeProjectYAML(settings);
+}
+
+export function parseSettingsYAML(text: string): Partial<TableauAppSettings> | null {
+  const parsed = parseProjectYAML(text);
+  return parsed ? parsed.settings || null : null;
 }
 
 export function flatIdToSlot(flatId: number): { col: number; row: number } {

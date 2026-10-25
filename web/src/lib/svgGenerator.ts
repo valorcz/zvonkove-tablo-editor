@@ -1,4 +1,4 @@
-import type { FlatEntry, BadgeStyleId } from './types';
+import type { FlatEntry, BadgeStyleId, PrintColumnOption } from './types';
 import {
   COL_ORIGINS_X,
   SVG_VIEWBOX,
@@ -45,7 +45,8 @@ export function generateFullSVG(
   showScale = true,
   badgeStyle: BadgeStyleId = 'classic',
   showCropMarks = true,
-  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT
+  textPaddingLeft: number = DEFAULT_TEXT_PADDING_LEFT,
+  printColumn: PrintColumnOption = 'all'
 ): string {
   let cardsXml = '';
   let badgesXml = '';
@@ -53,11 +54,15 @@ export function generateFullSVG(
   const fontWeight = isBold ? (fontOption.id === 'Iosevka' ? 600 : 700) : 400;
 
   for (let fid = 1; fid <= 28; fid++) {
+    const { col, row } = flatIdToSlot(fid);
+    if (printColumn !== 'all' && col + 1 !== printColumn) {
+      continue;
+    }
+
     const entry = flats.find((f) => f.id === fid) || { id: fid, name1: '', name2: '' };
     const names = [entry.name1.trim(), entry.name2.trim()].filter((n) => n.length > 0);
     const displayNames = names.length > 0 ? names : [`Byt ${fid}`];
 
-    const { col, row } = flatIdToSlot(fid);
     const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
     const fs = calculateFontSize(displayNames, fontOption, isBold, badgeStyle, textPaddingLeft);
 
@@ -141,7 +146,9 @@ export function generateFullSVG(
     const markGap = 5.0;
 
     let marks = '';
-    for (const colX of COL_ORIGINS_X) {
+    for (let cIdx = 0; cIdx < COL_ORIGINS_X.length; cIdx++) {
+      if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
+      const colX = COL_ORIGINS_X[cIdx];
       const rightX = colX + colW;
       // Top-left
       marks += `        <line x1="${colX.toFixed(2)}" y1="${(topY - markGap - markLen).toFixed(2)}" x2="${colX.toFixed(2)}" y2="${(topY - markGap).toFixed(2)}" stroke="#94a3b8" stroke-width="1.2"/>\n`;
@@ -249,18 +256,19 @@ ${fontFaces}
             <rect x="0.5" y="0.5" width="621" height="1611" fill="none" stroke="#000000" stroke-width="1.5"/>
 ${templateSlots}        </g>
     </defs>
-    <!-- Vector Column 1 -->
+    <!-- Vector Column Templates -->
+    ${(printColumn === 'all' || printColumn === 1) ? `<!-- Column 1 -->
     <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[0]},210.788)">
         <use xlink:href="#_ColumnTemplate"/>
-    </g>
-    <!-- Vector Column 2 -->
+    </g>` : ''}
+    ${(printColumn === 'all' || printColumn === 2) ? `<!-- Column 2 -->
     <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[1]},210.788)">
         <use xlink:href="#_ColumnTemplate"/>
-    </g>
-    <!-- Vector Column 3 -->
+    </g>` : ''}
+    ${(printColumn === 'all' || printColumn === 3) ? `<!-- Column 3 -->
     <g transform="matrix(1.17229,0,0,1.17231,${COL_ORIGINS_X[2]},210.788)">
         <use xlink:href="#_ColumnTemplate"/>
-    </g>
+    </g>` : ''}
     <g id="Příjmení">
 ${cardsXml}    </g>
     <g id="Čísla-bytů" serif:id="Čísla bytů"${idsStyle}>

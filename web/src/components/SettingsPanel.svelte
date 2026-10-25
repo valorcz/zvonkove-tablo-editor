@@ -1,19 +1,21 @@
 <script lang="ts">
-  import type { BadgeStyleId } from '../lib/types';
+  import type { BadgeStyleId, PrintColumnOption, FlatEntry } from '../lib/types';
   import {
     FONT_OPTIONS,
     BADGE_STYLES,
     DEFAULT_BADGE_FILL,
     DEFAULT_TEXT_PADDING_LEFT,
-    serializeSettingsYAML,
-    parseSettingsYAML,
+    serializeProjectYAML,
+    parseProjectYAML,
     getSlotCoordinates,
     calculateFontSize,
     getWatermarkStyle,
     type FontOption,
   } from '../lib/tableauConfig';
+  import { downloadFile } from '../lib/svgGenerator';
 
   let {
+    flats = $bindable(),
     selectedFontId = $bindable(),
     isBold = $bindable(),
     badgeStyle = $bindable('classic'),
@@ -22,8 +24,10 @@
     textPaddingLeft = $bindable(DEFAULT_TEXT_PADDING_LEFT),
     showCropMarks = $bindable(true),
     showScale = $bindable(true),
+    printColumn = $bindable('all'),
     onClose = () => {},
   }: {
+    flats?: FlatEntry[];
     selectedFontId: string;
     isBold: boolean;
     badgeStyle: BadgeStyleId;
@@ -32,6 +36,7 @@
     textPaddingLeft: number;
     showCropMarks: boolean;
     showScale: boolean;
+    printColumn?: PrintColumnOption;
     onClose?: () => void;
   } = $props();
 
@@ -41,51 +46,99 @@
 
   let configYamlText = $state('');
   let copyFeedback = $state(false);
+  let feedbackMessage = $state('Zkopírováno do schránky!');
+  let fileInputEl: HTMLInputElement | null = $state(null);
 
   $effect(() => {
-    configYamlText = serializeSettingsYAML({
-      font: selectedFontId,
-      bold: isBold,
-      badgeStyle,
-      badgeColor,
-      showIds,
-      textPaddingLeft,
-      showCropMarks,
-      showScale,
-    });
+    configYamlText = serializeProjectYAML(
+      {
+        font: selectedFontId,
+        bold: isBold,
+        badgeStyle,
+        badgeColor,
+        showIds,
+        textPaddingLeft,
+        showCropMarks,
+        showScale,
+        printColumn,
+      },
+      flats
+    );
   });
 
   async function handleCopyConfigYAML() {
     try {
       await navigator.clipboard.writeText(configYamlText);
+      feedbackMessage = 'Zkopírováno do schránky!';
       copyFeedback = true;
       setTimeout(() => (copyFeedback = false), 2500);
     } catch {
+      feedbackMessage = 'Zkopírováno do schránky!';
       copyFeedback = true;
       setTimeout(() => (copyFeedback = false), 2500);
     }
   }
 
-  function handleApplyConfigYAML() {
-    const parsed = parseSettingsYAML(configYamlText);
-    if (!parsed) {
-      alert('Nepodařilo se načíst konfiguraci. Zkontrolujte formát.');
-      return;
-    }
-    if (parsed.font && FONT_OPTIONS.some((f) => f.id === parsed.font)) {
-      selectedFontId = parsed.font;
-    }
-    if (typeof parsed.bold === 'boolean') isBold = parsed.bold;
-    if (parsed.badgeStyle && BADGE_STYLES.some((s) => s.id === parsed.badgeStyle)) {
-      badgeStyle = parsed.badgeStyle;
-    }
-    if (parsed.badgeColor) badgeColor = parsed.badgeColor;
-    if (typeof parsed.showIds === 'boolean') showIds = parsed.showIds;
-    if (typeof parsed.textPaddingLeft === 'number') textPaddingLeft = parsed.textPaddingLeft;
-    if (typeof parsed.showCropMarks === 'boolean') showCropMarks = parsed.showCropMarks;
-    if (typeof parsed.showScale === 'boolean') showScale = parsed.showScale;
+  function handleDownloadProjectYAML() {
+    downloadFile(configYamlText, 'tablo-projekt.yaml', 'text/yaml;charset=utf-8');
+    feedbackMessage = 'Projekt byl úspěšně stažen!';
     copyFeedback = true;
     setTimeout(() => (copyFeedback = false), 2500);
+  }
+
+  function applyParsedProject(parsed: ReturnType<typeof parseProjectYAML>) {
+    if (!parsed) {
+      alert('Nepodařilo se načíst YAML soubor. Zkontrolujte prosím formát.');
+      return;
+    }
+    const s = parsed.settings;
+    if (s) {
+      if (s.font && FONT_OPTIONS.some((f) => f.id === s.font)) selectedFontId = s.font;
+      if (typeof s.bold === 'boolean') isBold = s.bold;
+      if (s.badgeStyle && BADGE_STYLES.some((b) => b.id === s.badgeStyle)) badgeStyle = s.badgeStyle;
+      if (s.badgeColor) badgeColor = s.badgeColor;
+      if (typeof s.showIds === 'boolean') showIds = s.showIds;
+      if (typeof s.textPaddingLeft === 'number') textPaddingLeft = s.textPaddingLeft;
+      if (typeof s.showCropMarks === 'boolean') showCropMarks = s.showCropMarks;
+      if (typeof s.showScale === 'boolean') showScale = s.showScale;
+      if (s.printColumn !== undefined) printColumn = s.printColumn;
+    }
+    if (parsed.flats && parsed.flats.length > 0 && flats) {
+      // Merge or replace flats
+      const updated = [...flats];
+      for (const f of parsed.flats) {
+        const idx = updated.findIndex((u) => u.id === f.id);
+        if (idx !== -1) {
+          updated[idx] = { ...updated[idx], name1: f.name1, name2: f.name2 };
+        }
+      }
+      flats = updated;
+    }
+    feedbackMessage = 'Konfigurace i jména byla úspěšně načtena!';
+    copyFeedback = true;
+    setTimeout(() => (copyFeedback = false), 3000);
+  }
+
+  function handleApplyConfigYAML() {
+    const parsed = parseProjectYAML(configYamlText);
+    applyParsedProject(parsed);
+  }
+
+  function handleFileSelect(e: Event) {
+    const target = e.target as HTMLInputElement;
+    const file = target.files?.[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const text = event.target?.result as string;
+      if (text) {
+        const parsed = parseProjectYAML(text);
+        applyParsedProject(parsed);
+      }
+    };
+    reader.readAsText(file);
+    // Reset input so same file can be selected again
+    target.value = '';
   }
 
   function handleResetSettingsToDefault() {
@@ -97,6 +150,7 @@
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT;
     showCropMarks = true;
     showScale = true;
+    printColumn = 'all';
   }
 
   const colorPresets = [
@@ -346,9 +400,9 @@
       </div>
     </div>
 
-    <!-- Section 4: Print Aids -->
+    <!-- Section 4: Print Aids & Column Scope -->
     <div class="settings-card">
-      <h4 class="card-title">Tiskové pomůcky</h4>
+      <h4 class="card-title">Tiskové pomůcky a rozsah tisku</h4>
       <div class="checkbox-stack">
         <label class="custom-checkbox">
           <input type="checkbox" bind:checked={showCropMarks} />
@@ -359,29 +413,99 @@
           <span>Kontrolní měřítko 1:1 (100mm pravítko v dolním okraji)</span>
         </label>
       </div>
+
+      <div class="form-field" style="margin-top: 14px;">
+        <span class="field-label">Výběr sloupce pro tisk:</span>
+        <div class="segmented-control print-cols-segmented">
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={printColumn === 'all'}
+            onclick={() => (printColumn = 'all')}
+          >
+            Všechny (1+2+3)
+          </button>
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={printColumn === 1}
+            onclick={() => (printColumn = 1)}
+          >
+            Sloupec 1 (01–10)
+          </button>
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={printColumn === 2}
+            onclick={() => (printColumn = 2)}
+          >
+            Sloupec 2 (11–20)
+          </button>
+          <button
+            type="button"
+            class="seg-btn"
+            class:active={printColumn === 3}
+            onclick={() => (printColumn = 3)}
+          >
+            Sloupec 3 (21–28)
+          </button>
+        </div>
+        <p class="field-hint">
+          Při volbě jednoho sloupce se na formát A4 vytiskne pouze daný modul na své přesné fyzické pozici. Šetří toner a inkoust při výměně jmenovek jen v jednom sloupci.
+        </p>
+      </div>
     </div>
 
-    <!-- Section 5: YAML Sharing -->
+    <!-- Section 5: YAML Sharing & Backup -->
     <div class="settings-card">
       <div class="section-header-flex">
-        <h4 class="card-title">Sdílení konfigurace (YAML / Text)</h4>
+        <h4 class="card-title">Sdílení a záloha projektu (YAML)</h4>
         {#if copyFeedback}
           <span class="copy-success-badge">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
               <polyline points="20 6 9 17 4 12"></polyline>
             </svg>
-            Zkopírováno do schránky!
+            {feedbackMessage}
           </span>
         {/if}
       </div>
       <p class="card-desc">
-        Kompletní nastavení můžete zkopírovat jako text a předat dál, nebo sem vložit konfiguraci od někoho jiného.
+        Kompletní stav projektu (veškeré jmenovky 28 bytů i nastavení vzhledu a sazby) můžete uložit do čitelného souboru YAML s komentáři nebo načíst zpět.
       </p>
+
+      <!-- Hidden file input for YAML upload -->
+      <input
+        type="file"
+        bind:this={fileInputEl}
+        onchange={handleFileSelect}
+        accept=".yaml,.yml,.txt"
+        style="display: none;"
+      />
+
+      <div class="file-action-buttons">
+        <button type="button" class="btn btn-primary" onclick={handleDownloadProjectYAML}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="7 10 12 15 17 10"></polyline>
+            <line x1="12" y1="15" x2="12" y2="3"></line>
+          </svg>
+          <span>Stáhnout projekt (YAML)</span>
+        </button>
+        <button type="button" class="btn btn-secondary" onclick={() => fileInputEl?.click()}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+            <polyline points="17 8 12 3 7 8"></polyline>
+            <line x1="12" y1="3" x2="12" y2="15"></line>
+          </svg>
+          <span>Nahrát projekt ze souboru</span>
+        </button>
+      </div>
+
       <textarea
         class="config-yaml-box"
-        rows="6"
+        rows="8"
         bind:value={configYamlText}
-        placeholder="# Zde můžete vložit nebo upravit konfiguraci..."
+        placeholder="# Zde můžete zkontrolovat nebo ručně upravit YAML..."
       ></textarea>
       <div class="yaml-actions">
         <button type="button" class="btn btn-secondary" onclick={handleCopyConfigYAML}>
@@ -389,13 +513,13 @@
             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
           </svg>
-          <span>Kopírovat nastavení</span>
+          <span>Kopírovat text</span>
         </button>
         <button type="button" class="btn btn-secondary" onclick={handleApplyConfigYAML}>
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
             <polyline points="20 6 9 17 4 12"></polyline>
           </svg>
-          <span>Použít vložené nastavení</span>
+          <span>Použít vložený text</span>
         </button>
         <button type="button" class="btn btn-ghost text-muted" onclick={handleResetSettingsToDefault}>
           Výchozí hodnoty
@@ -739,6 +863,33 @@
   .config-yaml-box:focus {
     border-color: #0284c7;
     background: #ffffff;
+  }
+
+  .file-action-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 0.65rem;
+    flex-wrap: wrap;
+  }
+
+  .print-cols-segmented {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
+    gap: 0.25rem;
+    background: #f1f5f9;
+    padding: 0.25rem;
+    border-radius: 6px;
+  }
+
+  .btn-primary {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+  }
+
+  .btn-primary:hover {
+    background: #0369a1;
+    border-color: #0369a1;
   }
 
   .yaml-actions {

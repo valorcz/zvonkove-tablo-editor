@@ -44,8 +44,13 @@ Stačí otevřít soubor [`zvonky-editor.html`](zvonky-editor.html) v libovolné
   - Přepínač v levém panelu umožňuje plynule přepínat mezi zadáváním jmenovek a detailním nastavením vzhledu, písma a sazby.
   - **Živý vzorový štítek (1:1 náhled)**: Horní karta v nastavení okamžitě vizualizuje libovolnou změnu barvy, fontu či odsazení.
   - Na desktopu zůstává živé celkové tablo na pravé straně **neustále viditelné a interaktivní**.
-- **Sdílení a záloha konfigurace (YAML / Text)**:
-  - Kompletní stav (písmo, tučnost, šablona, barva, sazba, ořezové značky, měřítko) lze jedním kliknutím zkopírovat ve formátu YAML a předat kolegům či sousedům, nebo vložit cizí konfiguraci.
+- **Kompletní záloha a sdílení projektu (YAML soubor)**:
+  - Kompletní stav celého tabla (seznam jmen pro všech 28 bytů i veškerá konfigurace písma, barev, šablon a tiskových parametrů) lze jedním kliknutím exportovat do čitelného souboru `tablo-projekt.yaml` s komentáři, nebo zpět načíst.
+  - Vhodné pro archivaci verzí v SVJ nebo předávání konfigurace mezi správci.
+  - K dispozici je také přímé kopírování/vkládání YAML textu přes schránku.
+- **Výběr rozsahu tisku (volba sloupců – úspora toneru / inkoustu)**:
+  - Možnost zvolit tisk všech sloupců najednou, nebo **pouze konkrétního sloupce** (např. *Sloupec 2 pro byty 11–20*).
+  - Při volbě jednoho sloupce se na formát A4 vytiskne pouze daný sloupec na své přesné fyzické pozici, takže při výměně jmenovek jen v jednom modulu neplýtváte černým ani barevným tonerem.
 - **Plná podpora pro mobilní zařízení**:
   - Na telefonech a tabletech ($\le 900\text{ px}$) se 3 sloupce automaticky skládají do 1 přehledného sloupce s velkými dotykovými poli pro pohodlné psaní.
   - Přepínač záložek na mobilu umožňuje rychlý přechod mezi **Jmenovky (28)**, **Nastavení & Sazba** a **Náhled tabla (A4)**.
@@ -103,6 +108,22 @@ Při tisku přímo z prohlížeče (tlačítko **Tisk / PDF** nebo klávesová z
 
 ---
 
+## 🔧 Fyzická montáž a výměna štítků v tablu
+
+Výměna papírových štítků ve zvonkovém tablu **Tesla / GUARD prima** vyžaduje dodržení správného postupu, aby nedošlo k poškození elektroniky či kabeláže:
+
+1. **Odemčení rámu klíčem FAB**: Zasuňte klíč do koncové lišty tabla, odemkněte zámek a lištu vyjměte. Tím se uvolní prostor pro posun modulů.
+2. **Posun a vyjmutí modulu**: Modul s tlačítky posuňte doprava a opatrně jej vyklopte k sobě.
+3. ⚠️ **POZOR NA PLOCHÝ KABEL**: Moduly jsou propojeny plochým páskovým kabelem. **Modul nikdy nesmí viset na kabelu!** Ihned jej zajistěte pomocnou montážní šňůrou (č. 4) na zadní straně za úchyt v montážním rámu.
+4. **Uvolnění západky plexiskla**: Na zadní straně modulu odjistěte plastovou západku (č. 3), která drží krycí sklo a štítek.
+5. **Vysunutí starého štítku (tip z praxe)**: Papírek i plexisklo bývají po letech vlivem prachu a vlhka „přilepené“ a prsty jdou vytáhnout jen ztuha. Použijte **pinzetu s tenkými čelistmi, tenkou plastovou kartu nebo modelářský háček / zahnutou kancelářskou sponku**, kterými štítek opatrně vysunete. Nikdy nepoužívejte hrubou sílu šroubovákem proti čelní straně, abyste plexisklo nepoškrábali.
+6. **Vložení a kontrola**: Zasuňte nový proužek z aplikace, zkontrolujte zepředu vystředění jmen, zacvakněte západku, modul zasuňte zpět doleva a uzamkněte koncovou lištu klíčem FAB.
+
+📖 **Podrobný ilustrovaný fotonávod krok za krokem** s nákresy z původní dokumentace dodavatele naleznete v samostatném dokumentu:  
+👉 **[`docs/montaz_a_vymena_stitku.md`](docs/montaz_a_vymena_stitku.md)**
+
+---
+
 ## 🛠️ Vývoj a údržba projektu
 
 Zdrojový kód webové aplikace je postaven na moderním stacku **Svelte 5**, **Vite 6** a **TypeScript** v adresáři [`web/`](web).
@@ -140,6 +161,7 @@ make clean            # Odstraní build artefakty a dočasné cache
 
 - **`zvonky-editor.html`** – hotový samostatný sestavený soubor aplikace pro koncové uživatele (bez závislostí).
 - **`sample_jmenovky.csv`** – vzorový importní/exportní soubor pro 28 bytů.
+- **`docs/montaz_a_vymena_stitku.md`** – podrobný ilustrovaný návod na fyzickou demontáž tabla a výměnu štítků.
 - **`web/src/lib/tableauConfig.ts`** – definice fyzické geometrie tabla (rozměry štítků, souřadnice slotů, tisková měřítka, šablony a styly).
 - **`web/src/lib/svgGenerator.ts`** – generování čistého tiskového vektorového SVG (297 × 210 mm) s vloženými fonty.
 - **`web/src/components/`** – UI komponenty Svelte (tabulka jmenovek, panel nastavení vzhledu, interaktivní SVG plátno).

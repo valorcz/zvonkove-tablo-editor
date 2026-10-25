@@ -1,6 +1,6 @@
 <script lang="ts">
   import { tick } from 'svelte';
-  import type { FlatEntry, BadgeStyleId } from '../lib/types';
+  import type { FlatEntry, BadgeStyleId, PrintColumnOption } from '../lib/types';
   import {
     COL_ORIGINS_X,
     SVG_VIEWBOX,
@@ -37,6 +37,7 @@
     badgeStyle = 'classic',
     showCropMarks = true,
     textPaddingLeft = DEFAULT_TEXT_PADDING_LEFT,
+    printColumn = 'all',
   }: {
     flats: FlatEntry[];
     showIds: boolean;
@@ -47,6 +48,7 @@
     badgeStyle?: BadgeStyleId;
     showCropMarks?: boolean;
     textPaddingLeft?: number;
+    printColumn?: PrintColumnOption;
   } = $props();
 
   const fontWeight = $derived(
@@ -85,7 +87,9 @@
   }
 
   const cards = $derived(
-    flats.map((entry) => {
+    flats
+      .filter((entry) => printColumn === 'all' || flatIdToSlot(entry.id).col + 1 === printColumn)
+      .map((entry) => {
       const names = [entry.name1.trim(), entry.name2.trim()].filter((n) => n.length > 0);
       const displayNames = names.length > 0 ? names : [`Byt ${entry.id}`];
 
@@ -122,7 +126,9 @@
   );
 
   const badges = $derived(
-    flats.map((entry) => {
+    flats
+      .filter((entry) => printColumn === 'all' || flatIdToSlot(entry.id).col + 1 === printColumn)
+      .map((entry) => {
       const { col, row } = flatIdToSlot(entry.id);
       const coords = getSlotCoordinates(col, row, badgeStyle, textPaddingLeft);
       const idStr = String(entry.id).padStart(2, '0');
@@ -230,7 +236,9 @@
     const markGap = 5.0;
 
     const list: { x1: number; y1: number; x2: number; y2: number }[] = [];
-    for (const colX of COL_ORIGINS_X) {
+    for (let cIdx = 0; cIdx < COL_ORIGINS_X.length; cIdx++) {
+      if (printColumn !== 'all' && cIdx + 1 !== printColumn) continue;
+      const colX = COL_ORIGINS_X[cIdx];
       const rightX = colX + colW;
       // Top-left
       list.push({ x1: colX, y1: topY - markGap - markLen, x2: colX, y2: topY - markGap });
@@ -455,17 +463,23 @@
         </defs>
 
         <!-- Column 1 vector background -->
-        <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[0]},210.788)">
-          <use xlink:href="#_ColumnTemplate" />
-        </g>
+        {#if printColumn === 'all' || printColumn === 1}
+          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[0]},210.788)">
+            <use xlink:href="#_ColumnTemplate" />
+          </g>
+        {/if}
         <!-- Column 2 vector background -->
-        <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[1]},210.788)">
-          <use xlink:href="#_ColumnTemplate" />
-        </g>
+        {#if printColumn === 'all' || printColumn === 2}
+          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[1]},210.788)">
+            <use xlink:href="#_ColumnTemplate" />
+          </g>
+        {/if}
         <!-- Column 3 vector background -->
-        <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[2]},210.788)">
-          <use xlink:href="#_ColumnTemplate" />
-        </g>
+        {#if printColumn === 'all' || printColumn === 3}
+          <g transform="matrix(1.17229,0,0,1.17231,{COL_ORIGINS_X[2]},210.788)">
+            <use xlink:href="#_ColumnTemplate" />
+          </g>
+        {/if}
 
         <!-- Names Layer -->
         <g id="Příjmení">
