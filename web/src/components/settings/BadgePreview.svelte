@@ -174,19 +174,17 @@
   }
 
   .sample-canvas-box {
-    background: #f1f5f9;
-    border: 1px dashed #cbd5e1;
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
     border-radius: 6px;
-    padding: 0.45rem;
-    display: flex;
-    justify-content: center;
-    align-items: center;
+    overflow: hidden;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, 0.08);
   }
 
   .sample-svg {
-    max-height: 56px;
-    width: auto;
-    max-width: 100%;
-    filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.08));
+    display: block;
+    width: 100%;
+    height: auto;
   }
 </style>
