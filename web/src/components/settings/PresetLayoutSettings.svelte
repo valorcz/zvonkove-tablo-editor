@@ -1,6 +1,7 @@
 <script lang="ts">
   import type { TableauLayoutConfig, TableauPresetId, FlatEntry } from '../../lib/types';
   import { TABLEAU_PRESETS, getTotalSlots } from '../../lib/tableauConfig';
+  import { HARDWARE_MANUFACTURERS } from '../../lib/hardwareProfiles';
 
   let {
     layout = $bindable(),
@@ -58,15 +59,21 @@
   </div>
 
   <div class="form-field">
-    <label for="preset-select">Přednastavený typ tabla (Preset):</label>
+    <label for="preset-select">Přednastavený typ tabla (Preset výrobce):</label>
     <select
       id="preset-select"
       class="select-input"
       value={layout.preset}
       onchange={(e) => selectPreset((e.target as HTMLSelectElement).value as TableauPresetId)}
     >
-      {#each TABLEAU_PRESETS as p}
-        <option value={p.id}>{p.label}</option>
+      {#each HARDWARE_MANUFACTURERS as mfr}
+        <optgroup label={mfr.name}>
+          {#each mfr.systems as sys}
+            {#each sys.presets as p}
+              <option value={p.id}>{p.label}</option>
+            {/each}
+          {/each}
+        </optgroup>
       {/each}
     </select>
     <p class="field-hint">

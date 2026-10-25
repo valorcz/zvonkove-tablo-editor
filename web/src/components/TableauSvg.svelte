@@ -2,6 +2,7 @@
   import { tick } from 'svelte';
   import ZoomToolbar from './ZoomToolbar.svelte';
   import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from '../lib/types';
+  import { decodeBadgeStyle, buildBadgeGeometry } from '../lib/badgeRegistry';
   import {
     SVG_VIEWBOX,
     SVG_WIDTH,
@@ -73,27 +74,6 @@
     lines: { text: string; y: number }[];
   }
 
-  interface RenderBadge {
-    id: number;
-    idStr: string;
-    shapeType: 'classic' | 'outline' | 'circle' | 'left-block' | 'corner-index' | 'inline-num' | 'watermark';
-    rectX: number;
-    rectY: number;
-    rectW: number;
-    rectH: number;
-    rx: number;
-    cx: number;
-    cy: number;
-    textY: number;
-    fontSize: number;
-    showDivider: boolean;
-    dividerX: number;
-    dividerY1: number;
-    dividerY2: number;
-    opacity: number;
-    color: string;
-  }
-
   const cards = $derived(
     mappings
       .filter((slot) => printColumn === 'all' || slot.colIndex + 1 === printColumn)
@@ -141,177 +121,20 @@
         const entry = flats.find((f) => f.id === slot.slotIndex) || { id: slot.slotIndex, name1: '', name2: '' };
         const coords = getSlotCoordinates(slot.colIndex, slot.rowIndex, badgeStyle, textPaddingLeft, colOrigins);
         const idStr = entry.customNumber || slot.defaultNumber;
+        const { position, shape } = decodeBadgeStyle(badgeStyle);
 
-        if (badgeStyle === 'left-block') {
-          const blockX = coords.colX + 129.54;
-          const blockY = coords.slotTop;
-          const blockW = 76.0;
-          const blockH = coords.slotBottom - coords.slotTop;
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'left-block',
-            rectX: blockX,
-            rectY: blockY,
-            rectW: blockW,
-            rectH: blockH,
-            rx: 0,
-            cx: blockX + blockW / 2.0,
-            cy: coords.slotCenterY,
-            textY: coords.slotCenterY + 14.0,
-            fontSize: 42,
-            showDivider: true,
-            dividerX: blockX + blockW,
-            dividerY1: blockY,
-            dividerY2: coords.slotBottom,
-            opacity: 1,
-            color: badgeColor,
-          } as RenderBadge;
-        }
-
-        if (badgeStyle === 'inline-num') {
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'inline-num',
-            rectX: 0,
-            rectY: 0,
-            rectW: 0,
-            rectH: 0,
-            rx: 0,
-            cx: coords.colX + 665.0,
-            cy: coords.slotCenterY,
-            textY: coords.slotCenterY + 13.0,
-            fontSize: 36,
-            showDivider: false,
-            dividerX: 0,
-            dividerY1: 0,
-            dividerY2: 0,
-            opacity: 1,
-            color: '#000000',
-          } as RenderBadge;
-        }
-
-        if (badgeStyle === 'corner-index') {
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'corner-index',
-            rectX: 0,
-            rectY: 0,
-            rectW: 0,
-            rectH: 0,
-            rx: 0,
-            cx: coords.colX + 675.0,
-            cy: coords.slotTop + 34.0,
-            textY: coords.slotTop + 34.0,
-            fontSize: 26,
-            showDivider: false,
-            dividerX: 0,
-            dividerY1: 0,
-            dividerY2: 0,
-            opacity: 1,
-            color: '#000000',
-          } as RenderBadge;
-        }
-
-        if (badgeStyle === 'circle') {
-          const cx = coords.badgeCx;
-          const cy = coords.badgeCy;
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'circle',
-            rectX: 0,
-            rectY: 0,
-            rectW: 0,
-            rectH: 0,
-            rx: 0,
-            cx,
-            cy,
-            textY: cy + 13.0,
-            fontSize: BADGE_FONT_SIZE,
-            showDivider: false,
-            dividerX: 0,
-            dividerY1: 0,
-            dividerY2: 0,
-            opacity: 1,
-            color: badgeColor,
-          } as RenderBadge;
-        }
-
-        if (badgeStyle === 'outline') {
-          const cx = coords.badgeCx;
-          const cy = coords.badgeCy;
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'outline',
-            rectX: cx - BADGE_WIDTH / 2.0,
-            rectY: cy - BADGE_HEIGHT / 2.0,
-            rectW: BADGE_WIDTH,
-            rectH: BADGE_HEIGHT,
-            rx: BADGE_RX,
-            cx,
-            cy,
-            textY: cy + 13.0,
-            fontSize: BADGE_FONT_SIZE,
-            showDivider: false,
-            dividerX: 0,
-            dividerY1: 0,
-            dividerY2: 0,
-            opacity: 1,
-            color: badgeColor,
-          } as RenderBadge;
-        }
-
-        if (badgeStyle === 'watermark') {
-          const wm = getWatermarkStyle(badgeColor);
-          return {
-            id: slot.slotIndex,
-            idStr,
-            shapeType: 'watermark',
-            rectX: 0,
-            rectY: 0,
-            rectW: 0,
-            rectH: 0,
-            rx: 0,
-            cx: coords.colX + 636.0,
-            cy: coords.slotCenterY,
-            textY: coords.slotCenterY + 28.0,
-            fontSize: 84,
-            showDivider: false,
-            dividerX: 0,
-            dividerY1: 0,
-            dividerY2: 0,
-            opacity: wm.opacity,
-            color: wm.fill,
-          } as RenderBadge;
-        }
-
-        // Default: 'classic' badge
-        const cx = coords.badgeCx;
-        const cy = coords.badgeCy;
-        return {
+        return buildBadgeGeometry({
           id: slot.slotIndex,
           idStr,
-          shapeType: 'classic',
-          rectX: cx - BADGE_WIDTH / 2.0,
-          rectY: cy - BADGE_HEIGHT / 2.0,
-          rectW: BADGE_WIDTH,
-          rectH: BADGE_HEIGHT,
-          rx: BADGE_RX,
-          cx,
-          cy,
-          textY: cy + 13.0,
-          fontSize: BADGE_FONT_SIZE,
-          showDivider: false,
-          dividerX: 0,
-          dividerY1: 0,
-          dividerY2: 0,
-          opacity: 1,
-          color: badgeColor,
-        } as RenderBadge;
+          position,
+          shape,
+          colX: coords.colX,
+          slotTop: coords.slotTop,
+          slotBottom: coords.slotBottom,
+          slotCenterY: coords.slotCenterY,
+          badgeColor,
+          numeralFontFamily,
+        });
       })
   );
 
@@ -598,89 +421,46 @@
           <g id="Čísla-bytů">
             {#each badges as badge (badge.id)}
               <g id="flat-badge-{badge.idStr}">
-                {#if badge.shapeType === 'watermark'}
-                  <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
-                    class="badge-text"
-                    style="font-size: {badge.fontSize}px; font-weight: 800; fill: {badge.color}; opacity: {badge.opacity};"
-                  >
-                    {badge.idStr}
-                  </text>
-                {:else if badge.shapeType === 'inline-num' || badge.shapeType === 'corner-index'}
-                  <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
-                    class="badge-text"
-                    style="font-size: {badge.fontSize}px;"
-                  >
-                    {badge.idStr}
-                  </text>
-                {:else if badge.shapeType === 'circle'}
-                  <circle
-                    cx="{badge.cx.toFixed(2)}px"
-                    cy="{badge.cy.toFixed(2)}px"
-                    r="27px"
-                    style="fill: {badge.color};"
-                  />
-                  <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
-                    class="badge-text"
-                    style="font-size: {badge.fontSize}px;"
-                  >
-                    {badge.idStr}
-                  </text>
-                {:else if badge.shapeType === 'outline'}
-                  <rect
-                    x="{badge.rectX.toFixed(2)}px"
-                    y="{badge.rectY.toFixed(2)}px"
-                    width="{badge.rectW}px"
-                    height="{badge.rectH}px"
-                    rx="{badge.rx}px"
-                    ry="{badge.rx}px"
-                    style="fill: none; stroke: {badge.color}; stroke-width: 2.5px;"
-                  />
-                  <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
-                    class="badge-text"
-                    style="font-size: {badge.fontSize}px;"
-                  >
-                    {badge.idStr}
-                  </text>
-                {:else}
-                  <rect
-                    x="{badge.rectX.toFixed(2)}px"
-                    y="{badge.rectY.toFixed(2)}px"
-                    width="{badge.rectW}px"
-                    height="{badge.rectH}px"
-                    rx="{badge.rx}px"
-                    ry="{badge.rx}px"
-                    style="fill: {badge.color};"
-                  />
-                  {#if badge.showDivider}
+                {#each badge.shapes as shape}
+                  {#if shape.type === 'rect'}
+                    <rect
+                      x="{shape.x?.toFixed(2)}px"
+                      y="{shape.y?.toFixed(2)}px"
+                      width="{shape.width?.toFixed(2)}px"
+                      height="{shape.height?.toFixed(2)}px"
+                      rx="{shape.rx || 0}px"
+                      ry="{shape.rx || 0}px"
+                      fill={shape.fill || 'none'}
+                      stroke={shape.stroke || 'none'}
+                      stroke-width={shape.strokeWidth || 0}
+                    />
+                  {:else if shape.type === 'circle'}
+                    <circle
+                      cx="{shape.cx?.toFixed(2)}px"
+                      cy="{shape.cy?.toFixed(2)}px"
+                      r="{shape.r?.toFixed(2)}px"
+                      fill={shape.fill || 'none'}
+                    />
+                  {:else if shape.type === 'line'}
                     <line
-                      x1="{badge.dividerX.toFixed(2)}"
-                      y1="{badge.dividerY1.toFixed(2)}"
-                      x2="{badge.dividerX.toFixed(2)}"
-                      y2="{badge.dividerY2.toFixed(2)}"
-                      stroke="#cbd5e1"
-                      stroke-width="2"
+                      x1="{shape.x1?.toFixed(2)}"
+                      y1="{shape.y1?.toFixed(2)}"
+                      x2="{shape.x2?.toFixed(2)}"
+                      y2="{shape.y2?.toFixed(2)}"
+                      stroke={shape.stroke}
+                      stroke-width={shape.strokeWidth || 1}
                     />
                   {/if}
+                {/each}
+                {#if badge.text}
                   <text
-                    x="{badge.cx.toFixed(2)}px"
-                    y="{badge.textY.toFixed(2)}px"
-                    text-anchor="middle"
+                    x="{badge.text.x.toFixed(2)}px"
+                    y="{badge.text.y.toFixed(2)}px"
+                    text-anchor={badge.text.textAnchor}
                     class="badge-text"
-                    style="font-size: {badge.fontSize}px;"
+                    style="font-family: {badge.text.fontFamily}; font-size: {badge.text.fontSize}px; font-weight: {badge.text.fontWeight}; fill: {badge.text.fill}; {badge.text.opacity !== undefined ? `opacity: ${badge.text.opacity};` : ''}"
                   >
-                    {badge.idStr}
+                    {badge.text.text}
                   </text>
                 {/if}
               </g>

@@ -7,6 +7,7 @@
     getDefaultLayout,
     computeSlotMapping,
   } from '../lib/tableauConfig';
+  import { decodeBadgeStyle } from '../lib/badgeRegistry';
 
   let {
     flats,
@@ -120,13 +121,15 @@
           {@const flat = getFlat(slot.slotIndex)}
           {@const displayNum = flat.customNumber || slot.defaultNumber}
           {@const status = checkFitStatus([flat.name1, flat.name2], fontOption, isBold, badgeStyle, textPaddingLeft)}
+          {@const { position, shape } = decodeBadgeStyle(badgeStyle)}
+          {@const isColored = position !== 'none' && ((position === 'right-center' && shape !== 'none') || (position === 'corner-index' && shape !== 'none') || position === 'left-block' || position === 'watermark')}
           <div class="flat-row" class:status-overflow={status === 'overflow'} class:status-tight={status === 'tight'}>
             <!-- svelte-ignore a11y_click_events_have_key_events -->
             <!-- svelte-ignore a11y_no_static_element_interactions -->
             <span
               class="flat-badge style-{badgeStyle}"
               class:has-custom-num={Boolean(flat.customNumber)}
-              style="background-color: {badgeStyle === 'none' || badgeStyle === 'inline-num' || badgeStyle === 'corner-index' || badgeStyle === 'outline' ? 'transparent' : badgeColor}; {badgeStyle === 'outline' ? `border: 2px solid ${badgeColor};` : ''} {badgeStyle === 'circle' ? 'border-radius: 9999px;' : ''} {badgeStyle === 'watermark' ? 'opacity: 0.7;' : ''}"
+              style="background-color: {isColored ? badgeColor : 'transparent'}; {shape === 'circle' ? 'border-radius: 9999px;' : ''} {position === 'watermark' ? 'opacity: 0.7;' : ''}"
               title="Kliknutím upravíte číslo bytu (aktuálně: {displayNum})"
               onclick={() => editCustomNumber(flat, slot.defaultNumber)}
             >

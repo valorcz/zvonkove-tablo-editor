@@ -4,7 +4,9 @@ export type TableauPresetId =
   | 'tesla-guard-20'
   | 'tesla-guard-30'
   | 'tesla-guard-40'
-  | 'custom';
+  | 'urmet-sinthesi-16'
+  | 'custom'
+  | string;
 
 export type NumberingDirection = 'bottom-up' | 'top-down' | 'row-left-right';
 
@@ -15,6 +17,16 @@ export interface ColumnConfig {
   capacity: number;   // total button positions of module (typically 10 or 5)
   skipTop: number;    // skipped positions at top (e.g. 2 in 28-flat col 3)
   skipBottom: number; // skipped positions at bottom
+}
+
+export interface PresetDefinition {
+  id: TableauPresetId;
+  label: string;
+  description: string;
+  columns: ColumnConfig[];
+  numberingDirection: NumberingDirection;
+  startNumber: number;
+  printMode: PrintLayoutMode;
 }
 
 export interface TableauLayoutConfig {
@@ -32,15 +44,19 @@ export interface FlatEntry {
   name2: string;
 }
 
+export type BadgePosition = 'right-center' | 'corner-index' | 'left-block' | 'watermark' | 'none';
+export type BadgeShape = 'badge' | 'circle' | 'none';
+
 export type BadgeStyleId =
   | 'classic'
-  | 'outline'
   | 'circle'
   | 'left-block'
   | 'corner-index'
+  | 'corner-badge'
   | 'inline-num'
   | 'watermark'
-  | 'none';
+  | 'none'
+  | 'outline';
 
 export type NumeralFontMode = 'iosevka' | 'inherit';
 

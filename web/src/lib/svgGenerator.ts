@@ -1,4 +1,5 @@
 import type { FlatEntry, BadgeStyleId, PrintColumnOption, TableauLayoutConfig, NumeralFontMode } from './types';
+import { decodeBadgeStyle, buildBadgeGeometry } from './badgeRegistry';
 import {
   COL_ORIGINS_X,
   SVG_VIEWBOX,
@@ -95,66 +96,35 @@ export function generateFullSVG(
     cardsXml += `        </g>\n`;
 
     // Render badge according to badgeStyle
-    if (badgeStyle === 'left-block') {
-      const blockX = coords.colX + 129.54;
-      const blockY = coords.slotTop;
-      const blockW = 76.0;
-      const blockH = coords.slotBottom - coords.slotTop;
-      const textX = blockX + blockW / 2.0;
-      const textY = coords.slotCenterY + 14.0;
-      const divX = blockX + blockW;
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <rect x="${blockX.toFixed(2)}px" y="${blockY.toFixed(2)}px" width="${blockW.toFixed(2)}px" height="${blockH.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
-      badgesXml += `            <line x1="${divX.toFixed(2)}" y1="${blockY.toFixed(2)}" x2="${divX.toFixed(2)}" y2="${coords.slotBottom.toFixed(2)}" stroke="#cbd5e1" stroke-width="2"/>\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:42px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'inline-num') {
-      const textX = coords.colX + 665.0;
-      const textY = coords.slotCenterY + 13.0;
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:36px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'corner-index') {
-      const textX = coords.colX + 675.0;
-      const textY = coords.slotTop + 34.0;
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:26px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'circle') {
-      const cx = coords.badgeCx;
-      const cy = coords.badgeCy;
-      const badgeTextY = cy + 13.0;
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <circle cx="${cx.toFixed(2)}px" cy="${cy.toFixed(2)}px" r="27px" style="fill:${badgeColor};"/>\n`;
-      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'outline') {
-      const cx = coords.badgeCx;
-      const cy = coords.badgeCy;
-      const rectX = cx - BADGE_WIDTH / 2.0;
-      const rectY = cy - BADGE_HEIGHT / 2.0;
-      const badgeTextY = cy + 13.0;
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:none;stroke:${badgeColor};stroke-width:2.5;"/>\n`;
-      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'watermark') {
-      const textX = coords.colX + 636.0;
-      const textY = coords.slotCenterY + 28.0;
-      const wm = getWatermarkStyle(badgeColor);
-      badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <text x="${textX.toFixed(2)}px" y="${textY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:800;font-size:84px;fill:${wm.fill};opacity:${wm.opacity};">${idStr}</text>\n`;
-      badgesXml += `        </g>\n`;
-    } else if (badgeStyle === 'classic') {
-      const cx = coords.badgeCx;
-      const cy = coords.badgeCy;
-      const rectX = cx - BADGE_WIDTH / 2.0;
-      const rectY = cy - BADGE_HEIGHT / 2.0;
-      const badgeTextY = cy + 13.0;
+    const { position, shape } = decodeBadgeStyle(badgeStyle);
+    const badge = buildBadgeGeometry({
+      id: slot.slotIndex,
+      idStr,
+      position,
+      shape,
+      colX: coords.colX,
+      slotTop: coords.slotTop,
+      slotBottom: coords.slotBottom,
+      slotCenterY: coords.slotCenterY,
+      badgeColor,
+      numeralFontFamily: numFont,
+    });
 
+    if (badge && (badge.shapes.length > 0 || badge.text)) {
       badgesXml += `        <g id="flat-badge-${idStr}">\n`;
-      badgesXml += `            <rect x="${rectX.toFixed(2)}px" y="${rectY.toFixed(2)}px" width="${BADGE_WIDTH.toFixed(2)}px" height="${BADGE_HEIGHT.toFixed(2)}px" rx="${BADGE_RX.toFixed(2)}px" ry="${BADGE_RX.toFixed(2)}px" style="fill:${badgeColor};"/>\n`;
-      badgesXml += `            <text x="${cx.toFixed(2)}px" y="${badgeTextY.toFixed(2)}px" text-anchor="middle" style="font-family:${numFont};font-variant-numeric:tabular-nums;font-weight:700;font-size:${BADGE_FONT_SIZE.toFixed(2)}px;fill:#000000;">${idStr}</text>\n`;
+      for (const sh of badge.shapes) {
+        if (sh.type === 'rect') {
+          badgesXml += `            <rect x="${sh.x?.toFixed(2)}px" y="${sh.y?.toFixed(2)}px" width="${sh.width?.toFixed(2)}px" height="${sh.height?.toFixed(2)}px" rx="${sh.rx || 0}px" ry="${sh.rx || 0}px" style="fill:${sh.fill || 'none'};" />\n`;
+        } else if (sh.type === 'circle') {
+          badgesXml += `            <circle cx="${sh.cx?.toFixed(2)}px" cy="${sh.cy?.toFixed(2)}px" r="${sh.r?.toFixed(2)}px" style="fill:${sh.fill || 'none'};" />\n`;
+        } else if (sh.type === 'line') {
+          badgesXml += `            <line x1="${sh.x1?.toFixed(2)}" y1="${sh.y1?.toFixed(2)}" x2="${sh.x2?.toFixed(2)}" y2="${sh.y2?.toFixed(2)}" stroke="${sh.stroke}" stroke-width="${sh.strokeWidth || 1}" />\n`;
+        }
+      }
+      if (badge.text) {
+        const opacityStyle = badge.text.opacity !== undefined ? `opacity:${badge.text.opacity};` : '';
+        badgesXml += `            <text x="${badge.text.x.toFixed(2)}px" y="${badge.text.y.toFixed(2)}px" text-anchor="${badge.text.textAnchor}" style="font-family:${badge.text.fontFamily};font-variant-numeric:tabular-nums;font-weight:${badge.text.fontWeight};font-size:${badge.text.fontSize}px;fill:${badge.text.fill};${opacityStyle}">${escapeXml(badge.text.text)}</text>\n`;
+      }
       badgesXml += `        </g>\n`;
     }
   }

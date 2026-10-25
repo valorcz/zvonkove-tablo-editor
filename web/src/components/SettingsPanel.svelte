@@ -145,10 +145,10 @@
     <PresetLayoutSettings bind:layout bind:flats />
 
     <!-- Typography & Names Alignment -->
-    <TypographySettings bind:selectedFontId bind:isBold bind:textPaddingLeft />
+    <TypographySettings bind:selectedFontId bind:isBold bind:textPaddingLeft bind:numeralFontMode />
 
     <!-- Badge Styles & Colors -->
-    <BadgeSettings bind:badgeStyle bind:badgeColor bind:showIds bind:numeralFontMode />
+    <BadgeSettings bind:badgeStyle bind:badgeColor bind:showIds />
 
     <!-- Print Aids & Scope -->
     <PrintSettings bind:showCropMarks bind:showScale bind:printColumn columns={layout.columns} />

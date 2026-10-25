@@ -10,7 +10,10 @@ import type {
   ColumnConfig,
   TableauLayoutConfig,
   SlotMapping,
+  PresetDefinition,
 } from './types';
+import { ALL_TABLEAU_PRESETS } from './hardwareProfiles';
+import { decodeBadgeStyle, getBadgeLayoutTextMetrics } from './badgeRegistry';
 
 // A4 Landscape 300 DPI canvas
 export const SVG_VIEWBOX = '0 0 3508 2481';
@@ -87,93 +90,8 @@ export const BADGE_STYLES: BadgeStyleOption[] = [
   },
 ];
 
-// --- Tableau Presets ---
-export interface PresetDefinition {
-  id: TableauPresetId;
-  label: string;
-  description: string;
-  columns: ColumnConfig[];
-  numberingDirection: NumberingDirection;
-  startNumber: number;
-  printMode: PrintLayoutMode;
-}
-
-export const TABLEAU_PRESETS: PresetDefinition[] = [
-  {
-    id: 'tesla-guard-28',
-    label: 'Tesla GUARD prima – 28 bytů (10+10+8)',
-    description: '3 sloupce, 3. sloupec má 8 bytů (horní 2 pozice prázdné), číslování zdola nahoru',
-    columns: [
-      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 },
-    ],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'frame-1to1',
-  },
-  {
-    id: 'tesla-guard-10',
-    label: 'Tesla GUARD prima – 10 bytů (1 sloupec)',
-    description: '1 modul TT10 s 10 tlačítky, číslování zdola nahoru',
-    columns: [{ id: 1, capacity: 10, skipTop: 0, skipBottom: 0 }],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'frame-1to1',
-  },
-  {
-    id: 'tesla-guard-20',
-    label: 'Tesla GUARD prima – 20 bytů (2 sloupce)',
-    description: '2 moduly TT10 (10 + 10 tlačítek), číslování zdola nahoru',
-    columns: [
-      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
-    ],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'frame-1to1',
-  },
-  {
-    id: 'tesla-guard-30',
-    label: 'Tesla GUARD prima – 30 bytů (3 sloupce)',
-    description: '3 moduly TT10 (10 + 10 + 10 tlačítek), číslování zdola nahoru',
-    columns: [
-      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 },
-    ],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'frame-1to1',
-  },
-  {
-    id: 'tesla-guard-40',
-    label: 'Tesla GUARD prima – 40 bytů (4 sloupce)',
-    description: '4 moduly TT10 (10 + 10 + 10 + 10 tlačítek), úsporný tisk',
-    columns: [
-      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 3, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 4, capacity: 10, skipTop: 0, skipBottom: 0 },
-    ],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'compact-strips',
-  },
-  {
-    id: 'custom',
-    label: 'Vlastní rozložení (Custom)',
-    description: 'Uživatelsky nastavený počet sloupců a kapacit tlačítek',
-    columns: [
-      { id: 1, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 2, capacity: 10, skipTop: 0, skipBottom: 0 },
-      { id: 3, capacity: 10, skipTop: 2, skipBottom: 0 },
-    ],
-    numberingDirection: 'bottom-up',
-    startNumber: 1,
-    printMode: 'frame-1to1',
-  },
-];
+// --- Tableau Presets (Loaded from hardwareProfiles.yaml) ---
+export const TABLEAU_PRESETS: PresetDefinition[] = ALL_TABLEAU_PRESETS;
 
 export function getDefaultLayout(): TableauLayoutConfig {
   const p = TABLEAU_PRESETS[0];
@@ -294,50 +212,20 @@ export function getStyleMetrics(
   textLeftPadding: number;
   maxTextWidth: number;
 } {
-  const slotLeft = 129.54;
-  const slotRight = 703.96;
-
-  switch (styleId) {
-    case 'left-block': {
-      const blockWidth = 76.0;
-      const textGap = Math.max(16.0, textPaddingLeft * 0.35);
-      const startX = slotLeft + blockWidth + textGap;
-      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-    case 'inline-num': {
-      const startX = slotLeft + textPaddingLeft;
-      const rightLimit = slotRight - 75.0;
-      const maxWidth = Math.max(250.0, rightLimit - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-    case 'corner-index': {
-      const startX = slotLeft + textPaddingLeft;
-      const rightLimit = slotRight - 45.0;
-      const maxWidth = Math.max(250.0, rightLimit - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-    case 'circle': {
-      const startX = slotLeft + textPaddingLeft;
-      const rightLimit = 604.0;
-      const maxWidth = Math.max(250.0, rightLimit - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-    case 'watermark':
-    case 'none': {
-      const startX = slotLeft + textPaddingLeft;
-      const maxWidth = Math.max(250.0, slotRight - 20.0 - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-    case 'outline':
-    case 'classic':
-    default: {
-      const startX = slotLeft + textPaddingLeft;
-      const rightLimit = 604.0;
-      const maxWidth = Math.max(250.0, rightLimit - startX);
-      return { textLeftPadding: startX, maxTextWidth: maxWidth };
-    }
-  }
+  const { position, shape } = decodeBadgeStyle(styleId);
+  const metrics = getBadgeLayoutTextMetrics(
+    position,
+    shape,
+    0,
+    0,
+    152.4,
+    703.96,
+    textPaddingLeft
+  );
+  return {
+    textLeftPadding: metrics.textX,
+    maxTextWidth: Math.max(250.0, metrics.maxTextWidth),
+  };
 }
 
 export interface FontOption {

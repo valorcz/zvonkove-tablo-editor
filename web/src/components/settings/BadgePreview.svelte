@@ -3,9 +3,9 @@
   import {
     getSlotCoordinates,
     calculateFontSize,
-    getWatermarkStyle,
     type FontOption,
   } from '../../lib/tableauConfig';
+  import { decodeBadgeStyle, buildBadgeGeometry } from '../../lib/badgeRegistry';
 
   let {
     badgeStyle = 'classic',
@@ -37,6 +37,22 @@
       : "'Iosevka-Fixed-Bold', monospace"
   );
 
+  const sampleBadge = $derived.by(() => {
+    const { position, shape } = decodeBadgeStyle(badgeStyle);
+    return buildBadgeGeometry({
+      id: 1,
+      idStr: '01',
+      position,
+      shape,
+      colX: -129.54, // Align relative coordinates so slotLeft = 0, slotRight = 574.42
+      slotTop: 0,
+      slotBottom: sampleSlotH,
+      slotCenterY: sampleSlotH / 2.0,
+      badgeColor,
+      numeralFontFamily,
+    });
+  });
+
   const sampleMetrics = $derived.by(() => {
     const coords = getSlotCoordinates(0, 0, badgeStyle, textPaddingLeft);
     const relTextX = coords.textX - (coords.colX + 129.54);
@@ -50,8 +66,6 @@
       : relCenterY + 0.38 * fs;
     const b2 = isTwoLines ? relCenterY + 0.5 * lineHeight + 0.38 * fs : 0;
 
-    const wmStyle = getWatermarkStyle(badgeColor);
-
     return {
       relTextX,
       relCenterY,
@@ -59,8 +73,6 @@
       b1,
       b2,
       fontWeight: isBold ? (currentFontOption.id === 'Iosevka' ? 600 : 700) : 400,
-      wmFill: wmStyle.fill,
-      wmOpacity: wmStyle.opacity,
     };
   });
 </script>
@@ -110,39 +122,45 @@
 
       <!-- Badge layer -->
       {#if showIds && badgeStyle !== 'none'}
-        {#if badgeStyle === 'left-block'}
-          <rect x="0" y="0" width="76" height={sampleSlotH} fill={badgeColor} />
-          <line x1="76" y1="0" x2="76" y2={sampleSlotH} stroke="#cbd5e1" stroke-width="2" />
-          <text x="38" y="{sampleMetrics.relCenterY + 14}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 42px; fill: #000000;">
-            01
-          </text>
-        {:else if badgeStyle === 'inline-num'}
-          <text x="{sampleSlotW - 39}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 36px; fill: #000000;">
-            01
-          </text>
-        {:else if badgeStyle === 'corner-index'}
-          <text x="{sampleSlotW - 24}px" y="34px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 26px; fill: #000000;">
-            01
-          </text>
-        {:else if badgeStyle === 'circle'}
-          <circle cx="{sampleSlotW - 24 - 31}px" cy="{sampleMetrics.relCenterY}px" r="27px" fill={badgeColor} />
-          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
-            01
-          </text>
-        {:else if badgeStyle === 'outline'}
-          <rect x="{sampleSlotW - 24 - 62}px" y="{(sampleSlotH - 54) / 2}px" width="62" height="54" rx="8" fill="none" stroke={badgeColor} stroke-width="2.5" />
-          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
-            01
-          </text>
-        {:else if badgeStyle === 'watermark'}
-          <text x="{sampleSlotW - 68}px" y="{sampleMetrics.relCenterY + 28}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 800; font-size: 84px; fill: {sampleMetrics.wmFill}; opacity: {sampleMetrics.wmOpacity};">
-            01
-          </text>
-        {:else}
-          <!-- Classic badge -->
-          <rect x="{sampleSlotW - 24 - 62}px" y="{(sampleSlotH - 54) / 2}px" width="62" height="54" rx="8" fill={badgeColor} />
-          <text x="{sampleSlotW - 24 - 31}px" y="{sampleMetrics.relCenterY + 13}px" text-anchor="middle" style="font-family: {numeralFontFamily}; font-variant-numeric: tabular-nums; font-weight: 700; font-size: 38px; fill: #000000;">
-            01
+        {#each sampleBadge.shapes as shape}
+          {#if shape.type === 'rect'}
+            <rect
+              x="{shape.x}px"
+              y="{shape.y}px"
+              width="{shape.width}px"
+              height="{shape.height}px"
+              rx="{shape.rx || 0}px"
+              ry="{shape.rx || 0}px"
+              fill={shape.fill || 'none'}
+              stroke={shape.stroke || 'none'}
+              stroke-width={shape.strokeWidth || 0}
+            />
+          {:else if shape.type === 'circle'}
+            <circle
+              cx="{shape.cx}px"
+              cy="{shape.cy}px"
+              r="{shape.r}px"
+              fill={shape.fill || 'none'}
+            />
+          {:else if shape.type === 'line'}
+            <line
+              x1="{shape.x1}"
+              y1="{shape.y1}"
+              x2="{shape.x2}"
+              y2="{shape.y2}"
+              stroke={shape.stroke}
+              stroke-width={shape.strokeWidth || 1}
+            />
+          {/if}
+        {/each}
+        {#if sampleBadge.text}
+          <text
+            x="{sampleBadge.text.x}px"
+            y="{sampleBadge.text.y}px"
+            text-anchor={sampleBadge.text.textAnchor}
+            style="font-family: {sampleBadge.text.fontFamily}; font-variant-numeric: tabular-nums; font-weight: {sampleBadge.text.fontWeight}; font-size: {sampleBadge.text.fontSize}px; fill: {sampleBadge.text.fill}; {sampleBadge.text.opacity !== undefined ? `opacity: ${sampleBadge.text.opacity};` : ''}"
+          >
+            {sampleBadge.text.text}
           </text>
         {/if}
       {/if}
